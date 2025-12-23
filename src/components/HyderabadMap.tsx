@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -12,35 +12,41 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Custom icons
-const createCustomIcon = (color: string, type: string) => {
-  const svgIcon: Record<string, string> = {
-    smartbin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="32" height="32"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
-    'compact-station': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="36" height="36"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`,
-    dumpyard: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="40" height="40"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>`
-  };
-
-  const svg = svgIcon[type] || svgIcon.smartbin;
-  
+// Custom icons - created as functions to avoid issues with Leaflet not being fully initialized
+function getSmartBinIcon() {
   return L.divIcon({
-    html: `<div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: ${color}20; border: 2px solid ${color}; border-radius: 12px; box-shadow: 0 4px 12px ${color}40;">${svg}</div>`,
+    html: `<div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #22c55e20; border: 2px solid #22c55e; border-radius: 12px; box-shadow: 0 4px 12px #22c55e40;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#22c55e" width="24" height="24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></div>`,
     className: 'custom-marker',
     iconSize: [40, 40],
     iconAnchor: [20, 40],
     popupAnchor: [0, -40]
   });
-};
+}
 
-// Memoize icons to prevent recreation on each render
-const smartBinIcon = createCustomIcon('#22c55e', 'smartbin');
-const compactStationIcon = createCustomIcon('#f59e0b', 'compact-station');
-const dumpyardIcon = createCustomIcon('#ef4444', 'dumpyard');
+function getCompactStationIcon() {
+  return L.divIcon({
+    html: `<div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #f59e0b20; border: 2px solid #f59e0b; border-radius: 12px; box-shadow: 0 4px 12px #f59e0b40;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f59e0b" width="24" height="24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg></div>`,
+    className: 'custom-marker',
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40]
+  });
+}
+
+function getDumpyardIcon() {
+  return L.divIcon({
+    html: `<div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #ef444420; border: 2px solid #ef4444; border-radius: 12px; box-shadow: 0 4px 12px #ef444440;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" width="24" height="24"><path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg></div>`,
+    className: 'custom-marker',
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40]
+  });
+}
 
 function MapController() {
   const map = useMap();
   
   useEffect(() => {
-    // Delay invalidateSize to ensure container is properly sized
     const timer = setTimeout(() => {
       map.invalidateSize();
     }, 100);
@@ -56,15 +62,19 @@ interface MapProps {
   showDumpyards: boolean;
 }
 
-export default function HyderabadMap({ showSmartBins, showCompactStations, showDumpyards }: MapProps) {
+function HyderabadMap({ showSmartBins, showCompactStations, showDumpyards }: MapProps) {
   const { data, routes } = useData();
   const hyderabadCenter: [number, number] = [17.385, 78.4867];
 
-  // Generate route colors
   const routeColors = [
     '#22d3ee', '#f59e0b', '#a855f7', '#22c55e', '#ef4444', 
     '#3b82f6', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6'
   ];
+
+  // Create icons inside the component to ensure Leaflet is initialized
+  const smartBinIcon = getSmartBinIcon();
+  const compactStationIcon = getCompactStationIcon();
+  const dumpyardIcon = getDumpyardIcon();
 
   return (
     <MapContainer
@@ -73,6 +83,7 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
       className="w-full h-full rounded-xl"
       scrollWheelZoom={true}
       zoomControl={true}
+      style={{ height: '100%', width: '100%' }}
     >
       <MapController />
       <TileLayer
@@ -158,7 +169,7 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
       {/* Routes */}
       {routes.map((route, index) => (
         <Polyline
-          key={route.vehicleId}
+          key={`${route.vehicleId}-${index}`}
           positions={route.coordinates}
           color={routeColors[index % routeColors.length]}
           weight={4}
@@ -169,3 +180,5 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
     </MapContainer>
   );
 }
+
+export default HyderabadMap;

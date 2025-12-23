@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trash2, Package, Building2, MapPin, Filter } from 'lucide-react';
-import HyderabadMap from '@/components/HyderabadMap';
+import MapWrapper from '@/components/MapWrapper';
 import { useData } from '@/context/DataContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -98,7 +98,7 @@ export default function HomePage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <HyderabadMap 
+          <MapWrapper 
             showSmartBins={showSmartBins}
             showCompactStations={showCompactStations}
             showDumpyards={showDumpyards}
