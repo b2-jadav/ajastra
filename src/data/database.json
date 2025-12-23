@@ -1,0 +1,49 @@
+{
+  "vehicles": {
+    "trucks": [
+      { "id": "T101", "capacity": 5000, "status": "active", "driver": "" },
+      { "id": "T102", "capacity": 5000, "status": "active", "driver": "" },
+      { "id": "T103", "capacity": 4500, "status": "active", "driver": "" },
+      { "id": "T104", "capacity": 5000, "status": "off-duty", "driver": "" },
+      { "id": "T105", "capacity": 4800, "status": "active", "driver": "" }
+    ],
+    "sats": [
+      { "id": "SAT101", "capacity": 500, "status": "active", "driver": "" },
+      { "id": "SAT102", "capacity": 500, "status": "active", "driver": "" },
+      { "id": "SAT103", "capacity": 450, "status": "active", "driver": "" },
+      { "id": "SAT104", "capacity": 500, "status": "off-duty", "driver": "" },
+      { "id": "SAT105", "capacity": 480, "status": "active", "driver": "" },
+      { "id": "SAT106", "capacity": 500, "status": "active", "driver": "" },
+      { "id": "SAT107", "capacity": 520, "status": "active", "driver": "" },
+      { "id": "SAT108", "capacity": 500, "status": "active", "driver": "" }
+    ]
+  },
+  "smartBins": [
+    { "id": "BIN001", "lat": 17.3850, "lng": 78.4867, "capacity": 100, "currentLevel": 85, "area": "Hitech City" },
+    { "id": "BIN002", "lat": 17.4156, "lng": 78.4347, "capacity": 100, "currentLevel": 45, "area": "Kukatpally" },
+    { "id": "BIN003", "lat": 17.4399, "lng": 78.3489, "capacity": 120, "currentLevel": 92, "area": "Miyapur" },
+    { "id": "BIN004", "lat": 17.4401, "lng": 78.5018, "capacity": 100, "currentLevel": 30, "area": "Secunderabad" },
+    { "id": "BIN005", "lat": 17.3616, "lng": 78.4747, "capacity": 80, "currentLevel": 78, "area": "Banjara Hills" },
+    { "id": "BIN006", "lat": 17.3950, "lng": 78.4750, "capacity": 100, "currentLevel": 65, "area": "Madhapur" },
+    { "id": "BIN007", "lat": 17.4260, "lng": 78.4540, "capacity": 90, "currentLevel": 88, "area": "KPHB" },
+    { "id": "BIN008", "lat": 17.3700, "lng": 78.5380, "capacity": 100, "currentLevel": 55, "area": "LB Nagar" },
+    { "id": "BIN009", "lat": 17.4480, "lng": 78.3910, "capacity": 110, "currentLevel": 72, "area": "Chandanagar" },
+    { "id": "BIN010", "lat": 17.3560, "lng": 78.4010, "capacity": 100, "currentLevel": 95, "area": "Tolichowki" },
+    { "id": "BIN011", "lat": 17.4100, "lng": 78.5200, "capacity": 85, "currentLevel": 40, "area": "Uppal" },
+    { "id": "BIN012", "lat": 17.3280, "lng": 78.4130, "capacity": 100, "currentLevel": 82, "area": "Attapur" },
+    { "id": "BIN013", "lat": 17.4020, "lng": 78.3650, "capacity": 95, "currentLevel": 60, "area": "Kondapur" },
+    { "id": "BIN014", "lat": 17.3450, "lng": 78.5520, "capacity": 100, "currentLevel": 70, "area": "Dilsukhnagar" },
+    { "id": "BIN015", "lat": 17.4350, "lng": 78.4120, "capacity": 100, "currentLevel": 50, "area": "Moosapet" }
+  ],
+  "compactStations": [
+    { "id": "CS001", "lat": 17.4050, "lng": 78.4550, "capacity": 2000, "currentLevel": 800, "area": "Ameerpet" },
+    { "id": "CS002", "lat": 17.3750, "lng": 78.4350, "capacity": 2500, "currentLevel": 1200, "area": "Jubilee Hills" },
+    { "id": "CS003", "lat": 17.4300, "lng": 78.3800, "capacity": 2000, "currentLevel": 950, "area": "Gachibowli" },
+    { "id": "CS004", "lat": 17.4500, "lng": 78.4900, "capacity": 1800, "currentLevel": 600, "area": "Malkajgiri" },
+    { "id": "CS005", "lat": 17.3400, "lng": 78.4800, "capacity": 2200, "currentLevel": 1500, "area": "Mehdipatnam" }
+  ],
+  "dumpyards": [
+    { "id": "DY001", "lat": 17.5200, "lng": 78.3100, "capacity": 50000, "currentLevel": 25000, "name": "Jawaharnagar Dumpyard" },
+    { "id": "DY002", "lat": 17.2800, "lng": 78.5600, "capacity": 40000, "currentLevel": 18000, "name": "Shamshabad Facility" }
+  ]
+}
