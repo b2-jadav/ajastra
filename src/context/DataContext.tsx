@@ -7,10 +7,13 @@ interface DataContextType {
   updateData: (newData: Database) => void;
   addSmartBin: (bin: SmartBin) => void;
   removeSmartBin: (id: string) => void;
+  updateBinLevel: (id: string, level: number) => void;
   addCompactStation: (station: CompactStation) => void;
   removeCompactStation: (id: string) => void;
+  updateStationLevel: (id: string, level: number) => void;
   addDumpyard: (dumpyard: Dumpyard) => void;
   removeDumpyard: (id: string) => void;
+  updateDumpyardLevel: (id: string, level: number) => void;
   addTruck: (truck: Vehicle) => void;
   removeTruck: (id: string) => void;
   updateTruckStatus: (id: string, status: Vehicle['status']) => void;
@@ -48,6 +51,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const updateBinLevel = (id: string, level: number) => {
+    setData(prev => ({
+      ...prev,
+      smartBins: prev.smartBins.map(bin =>
+        bin.id === id ? { ...bin, currentLevel: level } : bin
+      )
+    }));
+  };
+
   const addCompactStation = (station: CompactStation) => {
     setData(prev => ({
       ...prev,
@@ -62,6 +74,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const updateStationLevel = (id: string, level: number) => {
+    setData(prev => ({
+      ...prev,
+      compactStations: prev.compactStations.map(station =>
+        station.id === id ? { ...station, currentLevel: level } : station
+      )
+    }));
+  };
+
   const addDumpyard = (dumpyard: Dumpyard) => {
     setData(prev => ({
       ...prev,
@@ -73,6 +94,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setData(prev => ({
       ...prev,
       dumpyards: prev.dumpyards.filter(dy => dy.id !== id)
+    }));
+  };
+
+  const updateDumpyardLevel = (id: string, level: number) => {
+    setData(prev => ({
+      ...prev,
+      dumpyards: prev.dumpyards.map(dy =>
+        dy.id === id ? { ...dy, currentLevel: level } : dy
+      )
     }));
   };
 
@@ -146,10 +176,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       updateData,
       addSmartBin,
       removeSmartBin,
+      updateBinLevel,
       addCompactStation,
       removeCompactStation,
+      updateStationLevel,
       addDumpyard,
       removeDumpyard,
+      updateDumpyardLevel,
       addTruck,
       removeTruck,
       updateTruckStatus,

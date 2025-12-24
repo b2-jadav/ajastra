@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, Trash2, Truck, Package, Building2, MapPin, 
-  Edit2, AlertTriangle, CheckCircle, XCircle 
+  Edit2, AlertTriangle, CheckCircle, XCircle, Settings2 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { useData } from '@/context/DataContext';
 import { Vehicle, SmartBin, CompactStation, Dumpyard } from '@/types';
 import { toast } from 'sonner';
@@ -37,9 +38,9 @@ export default function ModificationPage() {
     data, 
     addTruck, removeTruck, updateTruckStatus,
     addSAT, removeSAT, updateSATStatus,
-    addSmartBin, removeSmartBin,
-    addCompactStation, removeCompactStation,
-    addDumpyard, removeDumpyard
+    addSmartBin, removeSmartBin, updateBinLevel,
+    addCompactStation, removeCompactStation, updateStationLevel,
+    addDumpyard, removeDumpyard, updateDumpyardLevel
   } = useData();
 
   // Form states
@@ -414,25 +415,26 @@ export default function ModificationPage() {
             <div className="grid gap-3 max-h-[500px] overflow-auto scrollbar-thin">
               {data.smartBins.map((bin) => (
                 <div key={bin.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div className="flex items-center gap-4">
-                    <div>
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="min-w-[80px]">
                       <span className="font-medium text-foreground">{bin.id}</span>
                       <p className="text-xs text-muted-foreground">{bin.area}</p>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground min-w-[120px]">
                       {bin.lat.toFixed(4)}, {bin.lng.toFixed(4)}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            bin.currentLevel > 80 ? 'bg-destructive' : 
-                            bin.currentLevel > 50 ? 'bg-warning' : 'bg-success'
-                          }`}
-                          style={{ width: `${bin.currentLevel}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground">{bin.currentLevel}%</span>
+                    <div className="flex items-center gap-3 flex-1 max-w-[200px]">
+                      <Slider
+                        value={[bin.currentLevel]}
+                        onValueChange={(value) => updateBinLevel(bin.id, value[0])}
+                        max={100}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <span className={`text-xs font-medium min-w-[35px] ${
+                        bin.currentLevel > 80 ? 'text-destructive' : 
+                        bin.currentLevel > 50 ? 'text-warning' : 'text-success'
+                      }`}>{bin.currentLevel}%</span>
                     </div>
                   </div>
                   <Button 
@@ -535,13 +537,22 @@ export default function ModificationPage() {
             <div className="grid gap-3">
               {data.compactStations.map((station) => (
                 <div key={station.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div className="flex items-center gap-4">
-                    <div>
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="min-w-[80px]">
                       <span className="font-medium text-foreground">{station.id}</span>
                       <p className="text-xs text-muted-foreground">{station.area}</p>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {station.currentLevel.toLocaleString()} / {station.capacity.toLocaleString()} kg
+                    <div className="flex items-center gap-3 flex-1 max-w-[250px]">
+                      <Slider
+                        value={[station.currentLevel]}
+                        onValueChange={(value) => updateStationLevel(station.id, value[0])}
+                        max={station.capacity}
+                        step={10}
+                        className="flex-1"
+                      />
+                      <span className="text-xs text-muted-foreground min-w-[100px]">
+                        {station.currentLevel.toLocaleString()} / {station.capacity.toLocaleString()} kg
+                      </span>
                     </div>
                   </div>
                   <Button 
@@ -642,13 +653,22 @@ export default function ModificationPage() {
             <div className="grid gap-3">
               {data.dumpyards.map((dumpyard) => (
                 <div key={dumpyard.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div className="flex items-center gap-4">
-                    <div>
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="min-w-[100px]">
                       <span className="font-medium text-foreground">{dumpyard.name}</span>
                       <p className="text-xs text-muted-foreground">{dumpyard.id}</p>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {dumpyard.currentLevel.toLocaleString()} / {dumpyard.capacity.toLocaleString()} tons
+                    <div className="flex items-center gap-3 flex-1 max-w-[250px]">
+                      <Slider
+                        value={[dumpyard.currentLevel]}
+                        onValueChange={(value) => updateDumpyardLevel(dumpyard.id, value[0])}
+                        max={dumpyard.capacity}
+                        step={100}
+                        className="flex-1"
+                      />
+                      <span className="text-xs text-muted-foreground min-w-[110px]">
+                        {dumpyard.currentLevel.toLocaleString()} / {dumpyard.capacity.toLocaleString()} tons
+                      </span>
                     </div>
                   </div>
                   <Button 

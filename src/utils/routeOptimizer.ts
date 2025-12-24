@@ -164,7 +164,12 @@ export async function generateOptimizedRoutes({
   // Step 2: Assign stations to dumpyards
   const stationAssignments = assignStationsToDumpyards(stations, dumpyards);
   
+  // Track SAT trips per vehicle and completion times per station
+  const satTripCount = new Map<string, number>();
+  const stationCompletionTime = new Map<string, number>(); // When last SAT finishes at each station
+  
   // Step 3: Generate SAT routes (bins -> compact stations)
+  // All SATs start at time 0
   let satIndex = 0;
   
   for (const [stationId, assignedBins] of binAssignments) {
@@ -179,6 +184,8 @@ export async function generateOptimizedRoutes({
     // Group bins based on SAT capacity
     let currentLoad = 0;
     let currentBatch: SmartBin[] = [];
+    let tripNumber = 1;
+    let currentSatTime = satTripCount.get(sat.id) || 0; // Accumulated time for this SAT
     
     for (const bin of sortedBins) {
       const binWeight = (bin.currentLevel / 100) * bin.capacity * 0.5; // Approximate weight in kg
@@ -210,6 +217,8 @@ export async function generateOptimizedRoutes({
             );
           }
           
+          const tripTime = Math.round((totalDist / 25) * 60); // 25 km/h average speed
+          
           routes.push({
             vehicleId: sat.id,
             vehicleType: 'sat',
@@ -221,9 +230,19 @@ export async function generateOptimizedRoutes({
               { lat: station.lat, lng: station.lng, type: 'compact-station', id: station.id, action: 'dropoff' }
             ],
             totalDistance: Math.round(totalDist * 10) / 10,
-            estimatedTime: Math.round((totalDist / 25) * 60), // Assuming 25 km/h average speed
+            estimatedTime: tripTime,
+            startTime: currentSatTime, // SATs start at 0 for first trip, or after previous trip
+            tripNumber: tripNumber,
+            targetStationId: stationId,
             coordinates: osrmRoute
           });
+          
+          currentSatTime += tripTime; // Add this trip time
+          tripNumber++;
+          
+          // Update station completion time
+          const prevCompletion = stationCompletionTime.get(stationId) || 0;
+          stationCompletionTime.set(stationId, Math.max(prevCompletion, currentSatTime));
         }
         
         currentBatch = [bin];
@@ -251,6 +270,8 @@ export async function generateOptimizedRoutes({
         );
       }
       
+      const tripTime = Math.round((totalDist / 25) * 60);
+      
       routes.push({
         vehicleId: sat.id,
         vehicleType: 'sat',
@@ -262,15 +283,26 @@ export async function generateOptimizedRoutes({
           { lat: station.lat, lng: station.lng, type: 'compact-station', id: station.id, action: 'dropoff' }
         ],
         totalDistance: Math.round(totalDist * 10) / 10,
-        estimatedTime: Math.round((totalDist / 25) * 60),
+        estimatedTime: tripTime,
+        startTime: currentSatTime,
+        tripNumber: tripNumber,
+        targetStationId: stationId,
         coordinates: osrmRoute
       });
+      
+      currentSatTime += tripTime;
+      
+      // Update station completion time
+      const prevCompletion = stationCompletionTime.get(stationId) || 0;
+      stationCompletionTime.set(stationId, Math.max(prevCompletion, currentSatTime));
     }
     
+    satTripCount.set(sat.id, currentSatTime);
     satIndex++;
   }
   
   // Step 4: Generate Truck routes (compact stations -> dumpyards)
+  // Trucks start when the last SAT finishes at their assigned station(s)
   let truckIndex = 0;
   
   for (const [dumpyardId, assignedStations] of stationAssignments) {
@@ -298,6 +330,15 @@ export async function generateOptimizedRoutes({
       );
     }
     
+    // Calculate truck start time: max of all SAT completion times for stations this truck visits
+    let truckStartTime = 0;
+    for (const station of optimizedStations) {
+      const stationTime = stationCompletionTime.get(station.id) || 0;
+      truckStartTime = Math.max(truckStartTime, stationTime);
+    }
+    
+    const tripTime = Math.round((totalDist / 35) * 60); // Trucks faster on highways
+    
     routes.push({
       vehicleId: truck.id,
       vehicleType: 'truck',
@@ -309,7 +350,8 @@ export async function generateOptimizedRoutes({
         { lat: dumpyard.lat, lng: dumpyard.lng, type: 'dumpyard', id: dumpyard.id, action: 'dropoff' }
       ],
       totalDistance: Math.round(totalDist * 10) / 10,
-      estimatedTime: Math.round((totalDist / 35) * 60), // Trucks faster on highways
+      estimatedTime: tripTime,
+      startTime: truckStartTime,
       coordinates: osrmRoute
     });
     
