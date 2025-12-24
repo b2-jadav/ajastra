@@ -57,7 +57,25 @@ export default function RoutesPage() {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
+      console.log('Excel raw data:', jsonData);
+      
       const parsedData = parseExcelData(jsonData);
+      
+      console.log('Parsed data:', parsedData);
+      
+      const totalImported = 
+        (parsedData.bins?.length || 0) + 
+        (parsedData.stations?.length || 0) + 
+        (parsedData.dumpyards?.length || 0) + 
+        (parsedData.sats?.length || 0) + 
+        (parsedData.trucks?.length || 0);
+      
+      if (totalImported === 0) {
+        toast.error('No valid data found. Ensure column 1 has type (bin/station/dumpyard/sat/truck).');
+        setUploadStatus('error');
+        setTimeout(() => setUploadStatus('idle'), 3000);
+        return;
+      }
       
       // Merge with existing data
       updateData({
