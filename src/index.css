@@ -68,9 +68,62 @@
     --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.4);
   }
 
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    
+    --card: 0 0% 98%;
+    --card-foreground: 222 47% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    --primary: 187 85% 43%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+    
+    --muted: 220 14% 92%;
+    --muted-foreground: 215 20% 40%;
+    
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 6%;
+    
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 187 85% 43%;
+    
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 187 85% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 187 85% 43%;
+    
+    --smartbin: 142 71% 40%;
+    --compact-station: 38 92% 45%;
+    --dumpyard: 0 72% 45%;
+    --truck: 217 91% 50%;
+    --sat: 280 85% 55%;
+    
+    --gradient-primary: linear-gradient(135deg, hsl(187 85% 43%), hsl(217 91% 50%));
+    --gradient-dark: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 95%));
+    --gradient-glow: radial-gradient(ellipse at center, hsl(187 85% 43% / 0.1), transparent 70%);
+    
+    --shadow-glow: 0 0 30px hsl(187 85% 43% / 0.2);
+    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.1);
   }
 }
 
@@ -86,43 +139,47 @@
 
   /* Leaflet map styles */
   .leaflet-container {
-    background: hsl(222 47% 8%) !important;
+    background: hsl(var(--card)) !important;
     border-radius: var(--radius);
   }
 
   .leaflet-tile-pane {
     filter: brightness(0.7) saturate(0.8) hue-rotate(180deg) invert(1);
   }
+  
+  .light .leaflet-tile-pane {
+    filter: none;
+  }
 
   .leaflet-control-zoom {
     border: none !important;
-    background: hsl(222 47% 10%) !important;
+    background: hsl(var(--card)) !important;
     border-radius: var(--radius) !important;
     overflow: hidden;
     box-shadow: var(--shadow-card) !important;
   }
 
   .leaflet-control-zoom a {
-    background: hsl(222 47% 12%) !important;
-    color: hsl(210 40% 98%) !important;
+    background: hsl(var(--secondary)) !important;
+    color: hsl(var(--foreground)) !important;
     border: none !important;
     transition: all 0.2s ease;
   }
 
   .leaflet-control-zoom a:hover {
-    background: hsl(187 85% 53%) !important;
-    color: hsl(222 47% 6%) !important;
+    background: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
   }
 
   .leaflet-popup-content-wrapper {
-    background: hsl(222 47% 10%) !important;
-    color: hsl(210 40% 98%) !important;
+    background: hsl(var(--card)) !important;
+    color: hsl(var(--foreground)) !important;
     border-radius: var(--radius) !important;
     box-shadow: var(--shadow-card) !important;
   }
 
   .leaflet-popup-tip {
-    background: hsl(222 47% 10%) !important;
+    background: hsl(var(--card)) !important;
   }
 }
 
