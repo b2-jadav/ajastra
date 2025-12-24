@@ -63,6 +63,9 @@ export interface OptimizedRoute {
   route: RoutePoint[];
   totalDistance: number;
   estimatedTime: number;
+  startTime: number; // minutes from start (0 for SATs, calculated for trucks)
+  tripNumber?: number; // for vehicles making multiple trips
+  targetStationId?: string; // station this route serves (for SAT routes)
   coordinates: [number, number][];
 }
 
