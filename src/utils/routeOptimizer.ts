@@ -147,22 +147,50 @@ export async function generateOptimizedRoutes({
 }: GenerateRoutesParams): Promise<OptimizedRoute[]> {
   const routes: OptimizedRoute[] = [];
   
-  // Filter active vehicles only
-  const activeSATs = sats.filter(s => s.status === 'active');
-  const activeTrucks = trucks.filter(t => t.status === 'active');
-  
-  if (activeSATs.length === 0 || activeTrucks.length === 0) {
-    throw new Error('No active vehicles available for routing');
+  // Validate required data
+  if (!bins || bins.length === 0) {
+    throw new Error('No smart bins available. Please upload data with GVP locations.');
   }
   
-  // Filter bins that need collection (> 30% full)
-  const binsToCollect = bins.filter(b => b.currentLevel >= 30);
+  if (!stations || stations.length === 0) {
+    throw new Error('No compact stations available. Please upload data with SCTP/station locations.');
+  }
+  
+  if (!sats || sats.length === 0) {
+    throw new Error('No SAT vehicles available. Please upload fleet data with Mini Tippers.');
+  }
+  
+  // Create default dumpyard if none provided
+  const activeDumpyards = dumpyards && dumpyards.length > 0 ? dumpyards : [
+    {
+      id: 'DUMPYARD-DEFAULT',
+      name: 'Central Dumpyard',
+      lat: 17.4239,
+      lng: 78.4738,
+      capacity: 100000,
+      currentLevel: 0
+    }
+  ];
+  
+  // Filter active vehicles only
+  const activeSATs = sats.filter(s => s.status === 'active');
+  const activeTrucks = trucks && trucks.length > 0 ? trucks.filter(t => t.status === 'active') : [];
+  
+  if (activeSATs.length === 0) {
+    throw new Error('No active SAT vehicles available for routing');
+  }
+  
+  // Filter bins that need collection (> 30% full), or all if none meet threshold
+  let binsToCollect = bins.filter(b => b.currentLevel >= 30);
+  if (binsToCollect.length === 0) {
+    binsToCollect = bins; // Collect all bins if none are above threshold
+  }
   
   // Step 1: Assign bins to compact stations
   const binAssignments = assignBinsToStations(binsToCollect, stations);
   
   // Step 2: Assign stations to dumpyards
-  const stationAssignments = assignStationsToDumpyards(stations, dumpyards);
+  const stationAssignments = assignStationsToDumpyards(stations, activeDumpyards);
   
   // Track SAT trips per vehicle and completion times per station
   const satTripCount = new Map<string, number>();
@@ -302,60 +330,65 @@ export async function generateOptimizedRoutes({
   }
   
   // Step 4: Generate Truck routes (compact stations -> dumpyards)
-  // Trucks start when the last SAT finishes at their assigned station(s)
-  let truckIndex = 0;
-  
-  for (const [dumpyardId, assignedStations] of stationAssignments) {
-    if (assignedStations.length === 0) continue;
+  // Only generate truck routes if we have trucks
+  if (activeTrucks.length > 0) {
+    let truckIndex = 0;
     
-    const dumpyard = dumpyards.find(d => d.id === dumpyardId)!;
-    const truck = activeTrucks[truckIndex % activeTrucks.length];
-    
-    // Optimize station visit order
-    const optimizedStations = nearestNeighborTSP(dumpyard, assignedStations, dumpyard);
-    
-    const routeCoords: [number, number][] = [
-      [dumpyard.lat, dumpyard.lng],
-      ...optimizedStations.map(s => [s.lat, s.lng] as [number, number]),
-      [dumpyard.lat, dumpyard.lng]
-    ];
-    
-    const osrmRoute = await getOSRMRoute(routeCoords);
-    
-    let totalDist = 0;
-    for (let i = 0; i < routeCoords.length - 1; i++) {
-      totalDist += haversineDistance(
-        routeCoords[i][0], routeCoords[i][1],
-        routeCoords[i+1][0], routeCoords[i+1][1]
-      );
+    for (const [dumpyardId, assignedStations] of stationAssignments) {
+      if (assignedStations.length === 0) continue;
+      
+      const dumpyard = activeDumpyards.find(d => d.id === dumpyardId);
+      if (!dumpyard) continue;
+      
+      const truck = activeTrucks[truckIndex % activeTrucks.length];
+      if (!truck) continue;
+      
+      // Optimize station visit order
+      const optimizedStations = nearestNeighborTSP(dumpyard, assignedStations, dumpyard);
+      
+      const routeCoords: [number, number][] = [
+        [dumpyard.lat, dumpyard.lng],
+        ...optimizedStations.map(s => [s.lat, s.lng] as [number, number]),
+        [dumpyard.lat, dumpyard.lng]
+      ];
+      
+      const osrmRoute = await getOSRMRoute(routeCoords);
+      
+      let totalDist = 0;
+      for (let i = 0; i < routeCoords.length - 1; i++) {
+        totalDist += haversineDistance(
+          routeCoords[i][0], routeCoords[i][1],
+          routeCoords[i+1][0], routeCoords[i+1][1]
+        );
+      }
+      
+      // Calculate truck start time: max of all SAT completion times for stations this truck visits
+      let truckStartTime = 0;
+      for (const station of optimizedStations) {
+        const stationTime = stationCompletionTime.get(station.id) || 0;
+        truckStartTime = Math.max(truckStartTime, stationTime);
+      }
+      
+      const tripTime = Math.round((totalDist / 35) * 60); // Trucks faster on highways
+      
+      routes.push({
+        vehicleId: truck.id,
+        vehicleType: 'truck',
+        route: [
+          { lat: dumpyard.lat, lng: dumpyard.lng, type: 'dumpyard', id: dumpyard.id, action: 'pickup' },
+          ...optimizedStations.map(s => ({
+            lat: s.lat, lng: s.lng, type: 'compact-station' as const, id: s.id, action: 'pickup' as const
+          })),
+          { lat: dumpyard.lat, lng: dumpyard.lng, type: 'dumpyard', id: dumpyard.id, action: 'dropoff' }
+        ],
+        totalDistance: Math.round(totalDist * 10) / 10,
+        estimatedTime: tripTime,
+        startTime: truckStartTime,
+        coordinates: osrmRoute
+      });
+      
+      truckIndex++;
     }
-    
-    // Calculate truck start time: max of all SAT completion times for stations this truck visits
-    let truckStartTime = 0;
-    for (const station of optimizedStations) {
-      const stationTime = stationCompletionTime.get(station.id) || 0;
-      truckStartTime = Math.max(truckStartTime, stationTime);
-    }
-    
-    const tripTime = Math.round((totalDist / 35) * 60); // Trucks faster on highways
-    
-    routes.push({
-      vehicleId: truck.id,
-      vehicleType: 'truck',
-      route: [
-        { lat: dumpyard.lat, lng: dumpyard.lng, type: 'dumpyard', id: dumpyard.id, action: 'pickup' },
-        ...optimizedStations.map(s => ({
-          lat: s.lat, lng: s.lng, type: 'compact-station' as const, id: s.id, action: 'pickup' as const
-        })),
-        { lat: dumpyard.lat, lng: dumpyard.lng, type: 'dumpyard', id: dumpyard.id, action: 'dropoff' }
-      ],
-      totalDistance: Math.round(totalDist * 10) / 10,
-      estimatedTime: tripTime,
-      startTime: truckStartTime,
-      coordinates: osrmRoute
-    });
-    
-    truckIndex++;
   }
   
   return routes;
@@ -431,16 +464,35 @@ export function parseMultiSheetExcel(workbook: any): Partial<ExcelData> {
         
         const sNo = row[0];
         const location = String(row[1] || '');
-        const longitude = parseFloat(row[2]);
-        const latitude = parseFloat(row[3]);
+        const col2Value = parseFloat(row[2]);
+        const col3Value = parseFloat(row[3]);
         const estimatedWaste = parseFloat(row[4]) || 1.0;
         
-        if (isNaN(latitude) || isNaN(longitude)) continue;
+        if (isNaN(col2Value) || isNaN(col3Value)) continue;
+        
+        // Auto-detect which column is lat vs lng based on value ranges
+        // Latitude for India: 6-36, Longitude for India: 68-98
+        // If col2 is in latitude range and col3 is in longitude range, use col2 as lat
+        let lat: number, lng: number;
+        
+        if (col2Value >= 6 && col2Value <= 36 && col3Value >= 68 && col3Value <= 98) {
+          // Col2 is latitude, Col3 is longitude (despite what headers may say)
+          lat = col2Value;
+          lng = col3Value;
+        } else if (col3Value >= 6 && col3Value <= 36 && col2Value >= 68 && col2Value <= 98) {
+          // Col3 is latitude, Col2 is longitude
+          lat = col3Value;
+          lng = col2Value;
+        } else {
+          // Can't determine, skip this row
+          console.warn(`Skipping row ${i}: coordinates out of India range (${col2Value}, ${col3Value})`);
+          continue;
+        }
         
         result.bins?.push({
           id: `GVP-${sNo || i}`,
-          lat: latitude,
-          lng: longitude,
+          lat: lat,
+          lng: lng,
           capacity: 100, // Default bin capacity in liters
           currentLevel: Math.min(100, Math.round(estimatedWaste * 50)), // Convert waste estimate to fill %
           area: location

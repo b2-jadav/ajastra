@@ -47,11 +47,20 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
+    // India bounds (approximate)
+    const indiaBounds: L.LatLngBoundsExpression = [
+      [6.5, 68.0],   // Southwest corner (southern tip, west border)
+      [35.5, 97.5]   // Northeast corner (northern tip, east border)
+    ];
+
     const map = L.map(mapContainerRef.current, {
-      center: [17.385, 78.4867],
+      center: [17.385, 78.4867], // Hyderabad center
       zoom: 12,
       zoomControl: true,
       scrollWheelZoom: true,
+      maxBounds: indiaBounds,
+      maxBoundsViscosity: 1.0, // Strict bounds - can't pan outside
+      minZoom: 5, // Minimum zoom to see most of India
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
