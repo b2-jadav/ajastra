@@ -474,25 +474,26 @@ export function parseMultiSheetExcel(workbook: any): Partial<ExcelData> {
         
         const vehicleType = String(row[1] || '').toLowerCase();
         const payloadCapacity = parseFloat(row[3]) || 4; // in tonnes
+        const capacityInKg = payloadCapacity * 1000;
         const numVehicles = parseInt(row[4]) || 1;
         
         if (!vehicleType) continue;
         
-        // Mini Tipper = SAT, others = Truck
-        const isSAT = vehicleType.includes('mini') || vehicleType.includes('tipper') || vehicleType.includes('sat');
+        // Vehicles with 16000+ kg capacity are trucks, Mini Tipper = SAT (if smaller capacity)
+        const isTruck = capacityInKg >= 16000 || (!vehicleType.includes('mini') && !vehicleType.includes('tipper') && !vehicleType.includes('sat'));
         
         for (let v = 0; v < numVehicles; v++) {
           const vehicle: Vehicle = {
-            id: `${isSAT ? 'SAT' : 'TRUCK'}-${payloadCapacity}T-${v + 1}`,
-            capacity: payloadCapacity * 1000, // Convert tonnes to kg
+            id: `${isTruck ? 'TRUCK' : 'SAT'}-${payloadCapacity}T-${v + 1}`,
+            capacity: capacityInKg,
             status: 'active',
             driver: ''
           };
           
-          if (isSAT) {
-            result.sats?.push(vehicle);
-          } else {
+          if (isTruck) {
             result.trucks?.push(vehicle);
+          } else {
+            result.sats?.push(vehicle);
           }
         }
       }
