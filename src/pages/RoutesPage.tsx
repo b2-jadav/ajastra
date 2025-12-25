@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useData } from '@/context/DataContext';
 import { useAuth } from '@/context/AuthContext';
-import { generateOptimizedRoutes, parseExcelData } from '@/utils/routeOptimizer';
+import { generateOptimizedRoutes, parseExcelData, parseMultiSheetExcel } from '@/utils/routeOptimizer';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
@@ -53,13 +53,33 @@ export default function RoutesPage() {
     try {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
       
-      console.log('Excel raw data:', jsonData);
+      // Expose XLSX to window for multi-sheet parser
+      (window as any).XLSX = XLSX;
       
-      const parsedData = parseExcelData(jsonData);
+      console.log('Excel sheets:', workbook.SheetNames);
+      
+      let parsedData;
+      
+      // Check if multi-sheet format (GVPs, Fleet Details, SCTP)
+      const hasMultiSheets = workbook.SheetNames.some((name: string) => 
+        name.toLowerCase().includes('sample') || 
+        name.toLowerCase().includes('gvp') ||
+        name.toLowerCase().includes('fleet') ||
+        name.toLowerCase().includes('sctp')
+      );
+      
+      if (hasMultiSheets || workbook.SheetNames.length > 1) {
+        console.log('Using multi-sheet parser');
+        parsedData = parseMultiSheetExcel(workbook);
+      } else {
+        // Legacy single-sheet format
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+        console.log('Excel raw data:', jsonData);
+        parsedData = parseExcelData(jsonData);
+      }
       
       console.log('Parsed data:', parsedData);
       
@@ -71,7 +91,7 @@ export default function RoutesPage() {
         (parsedData.trucks?.length || 0);
       
       if (totalImported === 0) {
-        toast.error('No valid data found. Ensure column 1 has type (bin/station/dumpyard/sat/truck).');
+        toast.error('No valid data found. Check that sheets are named: "Sample Data" (GVPs), "Fleet Details", "SCTP" (stations).');
         setUploadStatus('error');
         setTimeout(() => setUploadStatus('idle'), 3000);
         return;
@@ -90,7 +110,7 @@ export default function RoutesPage() {
       });
       
       setUploadStatus('success');
-      toast.success(`Imported: ${parsedData.bins?.length || 0} bins, ${parsedData.stations?.length || 0} stations, ${parsedData.sats?.length || 0} SATs, ${parsedData.trucks?.length || 0} trucks`);
+      toast.success(`Imported: ${parsedData.bins?.length || 0} GVPs, ${parsedData.stations?.length || 0} stations, ${parsedData.sats?.length || 0} SATs, ${parsedData.trucks?.length || 0} trucks`);
       
       setTimeout(() => setUploadStatus('idle'), 3000);
     } catch (error) {
@@ -107,18 +127,47 @@ export default function RoutesPage() {
   };
 
   const downloadSampleExcel = () => {
-    const sampleData = [
-      ['Type', 'ID', 'Lat', 'Lng', 'Capacity', 'CurrentLevel', 'Area/Name'],
-      ['bin', 'BIN001', '17.385', '78.4867', '100', '85', 'Hitech City'],
-      ['station', 'CS001', '17.405', '78.455', '2000', '800', 'Ameerpet'],
-      ['dumpyard', 'DY001', '17.52', '78.31', '50000', '25000', 'Jawaharnagar'],
-      ['sat', 'SAT001', '', '', '500', '', ''],
-      ['truck', 'T001', '', '', '5000', '', '']
+    // GVPs sheet (dustbins)
+    const gvpData = [
+      ['Locations of GVPs'],
+      [],
+      ['S No.', 'Location of the GVPs', 'Longitude', 'Latitude', 'Estimated Waste'],
+      [1, 'Hitech City', 78.3867, 17.4435, 1.10],
+      [2, 'Madhapur', 78.3960, 17.4486, 0.85],
+      [3, 'Kondapur', 78.3619, 17.4615, 1.25]
     ];
     
-    const ws = XLSX.utils.aoa_to_sheet(sampleData);
+    // Fleet Details sheet
+    const fleetData = [
+      ['Fleet Data'],
+      [],
+      ['S No.', 'Vehicle Particulars', 'GVW (Gross Vehicle Weight)', 'Payload Capacity (in Tonnes)', 'No. of Vehicles Available'],
+      [1, 'Mini Tipper', '7 T', 4.00, 5],
+      [2, 'Mini Tipper', '11 T', 8.00, 3],
+      [3, 'Compactor Truck', '28 T', 16.00, 2]
+    ];
+    
+    // SCTP sheet (Transfer Stations)
+    const sctpData = [
+      ['Locations of Transfer Stations'],
+      [],
+      ['S.No', 'Transferstation', 'Coordinates'],
+      [1, 'Nagole', '17°23\'23.38"N, 78°33\'32.79"E'],
+      [2, 'Mallapur', '17°26\'43.89"N, 78°34\'28.81"E'],
+      [3, 'Saket', '17°29\'43.13"N, 78°34\'47.31"E']
+    ];
+    
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    
+    const wsGvp = XLSX.utils.aoa_to_sheet(gvpData);
+    XLSX.utils.book_append_sheet(wb, wsGvp, 'Sample Data');
+    
+    const wsFleet = XLSX.utils.aoa_to_sheet(fleetData);
+    XLSX.utils.book_append_sheet(wb, wsFleet, 'Fleet Details');
+    
+    const wsSctp = XLSX.utils.aoa_to_sheet(sctpData);
+    XLSX.utils.book_append_sheet(wb, wsSctp, 'SCTP');
+    
     XLSX.writeFile(wb, 'waste_management_template.xlsx');
     toast.success('Sample template downloaded!');
   };
@@ -199,7 +248,7 @@ export default function RoutesPage() {
               {/* Excel Upload */}
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Upload an Excel file to import bulk data:
+                  Upload Excel with sheets: "Sample Data" (GVPs), "Fleet Details", "SCTP" (stations)
                 </p>
                 
                 <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors">

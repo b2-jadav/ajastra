@@ -361,6 +361,32 @@ export async function generateOptimizedRoutes({
   return routes;
 }
 
+// Parse DMS coordinates (e.g., 17°23'23.38"N, 78°33'32.79"E)
+function parseDMSCoordinates(coordString: string): { lat: number; lng: number } | null {
+  const regex = /(\d+)°(\d+)'([\d.]+)"([NS]),?\s*(\d+)°(\d+)'([\d.]+)"([EW])/;
+  const match = coordString.match(regex);
+  
+  if (!match) return null;
+  
+  const latDeg = parseFloat(match[1]);
+  const latMin = parseFloat(match[2]);
+  const latSec = parseFloat(match[3]);
+  const latDir = match[4];
+  
+  const lngDeg = parseFloat(match[5]);
+  const lngMin = parseFloat(match[6]);
+  const lngSec = parseFloat(match[7]);
+  const lngDir = match[8];
+  
+  let lat = latDeg + latMin / 60 + latSec / 3600;
+  let lng = lngDeg + lngMin / 60 + lngSec / 3600;
+  
+  if (latDir === 'S') lat = -lat;
+  if (lngDir === 'W') lng = -lng;
+  
+  return { lat, lng };
+}
+
 // Parse Excel data
 export interface ExcelData {
   bins: SmartBin[];
@@ -370,6 +396,160 @@ export interface ExcelData {
   trucks: Vehicle[];
 }
 
+// Parse multi-sheet workbook format
+export function parseMultiSheetExcel(workbook: any): Partial<ExcelData> {
+  const XLSX = (window as any).XLSX;
+  const result: Partial<ExcelData> = {
+    bins: [],
+    stations: [],
+    dumpyards: [],
+    sats: [],
+    trucks: []
+  };
+  
+  // Parse GVPs sheet (dustbins/smartbins)
+  const gvpSheetNames = ['Sample Data', 'GVPs', 'GVP', 'Locations of GVPs', 'Dustbins', 'Bins'];
+  for (const sheetName of workbook.SheetNames) {
+    if (gvpSheetNames.some(n => sheetName.toLowerCase().includes(n.toLowerCase()))) {
+      const sheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+      
+      // Find header row
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(5, data.length); i++) {
+        const row = data[i];
+        if (row && row.some((cell: any) => String(cell).toLowerCase().includes('longitude') || String(cell).toLowerCase().includes('latitude'))) {
+          headerIdx = i;
+          break;
+        }
+      }
+      
+      // Parse data rows
+      for (let i = headerIdx + 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length < 4) continue;
+        
+        const sNo = row[0];
+        const location = String(row[1] || '');
+        const longitude = parseFloat(row[2]);
+        const latitude = parseFloat(row[3]);
+        const estimatedWaste = parseFloat(row[4]) || 1.0;
+        
+        if (isNaN(latitude) || isNaN(longitude)) continue;
+        
+        result.bins?.push({
+          id: `GVP-${sNo || i}`,
+          lat: latitude,
+          lng: longitude,
+          capacity: 100, // Default bin capacity in liters
+          currentLevel: Math.min(100, Math.round(estimatedWaste * 50)), // Convert waste estimate to fill %
+          area: location
+        });
+      }
+      break;
+    }
+  }
+  
+  // Parse Fleet Details sheet (vehicles)
+  const fleetSheetNames = ['Fleet Details', 'Fleet', 'Vehicles', 'Fleet Data'];
+  for (const sheetName of workbook.SheetNames) {
+    if (fleetSheetNames.some(n => sheetName.toLowerCase().includes(n.toLowerCase()))) {
+      const sheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+      
+      // Find header row
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(5, data.length); i++) {
+        const row = data[i];
+        if (row && row.some((cell: any) => String(cell).toLowerCase().includes('vehicle') || String(cell).toLowerCase().includes('payload'))) {
+          headerIdx = i;
+          break;
+        }
+      }
+      
+      // Parse data rows
+      for (let i = headerIdx + 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length < 4) continue;
+        
+        const vehicleType = String(row[1] || '').toLowerCase();
+        const payloadCapacity = parseFloat(row[3]) || 4; // in tonnes
+        const numVehicles = parseInt(row[4]) || 1;
+        
+        if (!vehicleType) continue;
+        
+        // Mini Tipper = SAT, others = Truck
+        const isSAT = vehicleType.includes('mini') || vehicleType.includes('tipper') || vehicleType.includes('sat');
+        
+        for (let v = 0; v < numVehicles; v++) {
+          const vehicle: Vehicle = {
+            id: `${isSAT ? 'SAT' : 'TRUCK'}-${payloadCapacity}T-${v + 1}`,
+            capacity: payloadCapacity * 1000, // Convert tonnes to kg
+            status: 'active',
+            driver: ''
+          };
+          
+          if (isSAT) {
+            result.sats?.push(vehicle);
+          } else {
+            result.trucks?.push(vehicle);
+          }
+        }
+      }
+      break;
+    }
+  }
+  
+  // Parse SCTP sheet (Transfer Stations)
+  const sctpSheetNames = ['SCTP', 'Stations', 'Transfer Stations', 'Compact Stations'];
+  for (const sheetName of workbook.SheetNames) {
+    if (sctpSheetNames.some(n => sheetName.toLowerCase().includes(n.toLowerCase()))) {
+      const sheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+      
+      // Find header row
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(5, data.length); i++) {
+        const row = data[i];
+        if (row && row.some((cell: any) => String(cell).toLowerCase().includes('station') || String(cell).toLowerCase().includes('coordinate'))) {
+          headerIdx = i;
+          break;
+        }
+      }
+      
+      // Parse data rows
+      for (let i = headerIdx + 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length < 3) continue;
+        
+        const sNo = row[0];
+        const stationName = String(row[1] || '');
+        const coordString = String(row[2] || '');
+        
+        if (!stationName || !coordString) continue;
+        
+        // Try parsing DMS coordinates
+        const coords = parseDMSCoordinates(coordString);
+        
+        if (coords) {
+          result.stations?.push({
+            id: `SCTP-${sNo || i}`,
+            lat: coords.lat,
+            lng: coords.lng,
+            capacity: 20000, // Default 20 tonnes
+            currentLevel: 0,
+            area: stationName
+          });
+        }
+      }
+      break;
+    }
+  }
+  
+  return result;
+}
+
+// Legacy single-sheet parser
 export function parseExcelData(data: any[][]): Partial<ExcelData> {
   const result: Partial<ExcelData> = {
     bins: [],
