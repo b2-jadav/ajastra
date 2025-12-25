@@ -97,15 +97,15 @@ export default function RoutesPage() {
         return;
       }
       
-      // Merge with existing data
+      // Replace existing data with imported data (clear old data first)
       updateData({
         ...data,
-        smartBins: [...data.smartBins, ...(parsedData.bins || [])],
-        compactStations: [...data.compactStations, ...(parsedData.stations || [])],
-        dumpyards: [...data.dumpyards, ...(parsedData.dumpyards || [])],
+        smartBins: parsedData.bins || [],
+        compactStations: parsedData.stations || [],
+        dumpyards: parsedData.dumpyards || [],
         vehicles: {
-          trucks: [...data.vehicles.trucks, ...(parsedData.trucks || [])],
-          sats: [...data.vehicles.sats, ...(parsedData.sats || [])]
+          trucks: parsedData.trucks || [],
+          sats: parsedData.sats || []
         }
       });
       
