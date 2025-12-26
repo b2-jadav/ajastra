@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import { 
   Route, Play, Loader2, FileSpreadsheet, Upload, 
   Truck, Package, Clock, MapPin, AlertCircle, CheckCircle2,
-  Download
+  Download, Scale
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useData } from '@/context/DataContext';
 import { useAuth } from '@/context/AuthContext';
 import { generateOptimizedRoutes, parseExcelData, parseMultiSheetExcel } from '@/utils/routeOptimizer';
@@ -19,6 +20,7 @@ export default function RoutesPage() {
   const { data, routes, setRoutes, isGeneratingRoutes, setIsGeneratingRoutes, updateData } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [balancedWorkload, setBalancedWorkload] = useState(false);
 
   const handleGenerateRoutes = async () => {
     setIsGeneratingRoutes(true);
@@ -31,7 +33,8 @@ export default function RoutesPage() {
         stations: data.compactStations,
         dumpyards: data.dumpyards,
         sats: data.vehicles.sats,
-        trucks: data.vehicles.trucks
+        trucks: data.vehicles.trucks,
+        balancedWorkload
       });
       
       setRoutes(optimizedRoutes);
@@ -216,13 +219,33 @@ export default function RoutesPage() {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-success" />
-                    Vehicle capacity constraints
+                    Vehicle capacity constraints & fuel optimization
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-success" />
                     OSRM road network integration
                   </li>
                 </ul>
+                
+                {/* Balanced Workload Toggle */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 border border-border">
+                  <div className="flex items-center gap-3">
+                    <Scale className="w-5 h-5 text-primary" />
+                    <div>
+                      <Label htmlFor="balanced-workload" className="font-medium cursor-pointer">
+                        Balanced Workload
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Distribute dustbins equally across vehicles
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="balanced-workload"
+                    checked={balancedWorkload}
+                    onCheckedChange={setBalancedWorkload}
+                  />
+                </div>
                 
                 <Button 
                   onClick={handleGenerateRoutes}

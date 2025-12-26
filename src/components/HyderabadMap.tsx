@@ -20,8 +20,8 @@ interface MapProps {
 // Custom icon creators
 function createIcon(color: string, svgPath: string) {
   return L.divIcon({
-    html: `<div style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: ${color}20; border: 2px solid ${color}; border-radius: 10px; box-shadow: 0 4px 12px ${color}40;">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="20" height="20">${svgPath}</svg>
+    html: `<div style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: ${color}20; border: 2px solid ${color}; border-radius: 10px; box-shadow: 0 4px 12px ${color}40, 0 0 0 2px rgba(0,0,0,0.3);">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" stroke="#000" stroke-width="0.5" width="20" height="20">${svgPath}</svg>
     </div>`,
     className: 'custom-marker',
     iconSize: [36, 36],
@@ -180,9 +180,10 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
       if (route.coordinates && route.coordinates.length > 1) {
         const polyline = L.polyline(route.coordinates, {
           color: routeColors[index % routeColors.length],
-          weight: 4,
-          opacity: 0.8,
-          dashArray: route.vehicleType === 'sat' ? '10, 10' : undefined
+          weight: 6,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round'
         });
         routesRef.current?.addLayer(polyline);
       }

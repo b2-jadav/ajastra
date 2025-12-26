@@ -24,6 +24,7 @@ export interface SmartBin {
   capacity: number;
   currentLevel: number;
   area: string;
+  isSmartBin: boolean; // true = smart bin with sensors, false = regular bin
 }
 
 export interface CompactStation {
