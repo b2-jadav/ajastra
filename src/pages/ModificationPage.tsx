@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, Trash2, Truck, Package, Building2, MapPin, 
-  Edit2, AlertTriangle, CheckCircle, XCircle, Settings2 
+  Edit2, AlertTriangle, CheckCircle, XCircle, Settings2,
+  CheckSquare, Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useData } from '@/context/DataContext';
 import { Vehicle, SmartBin, CompactStation, Dumpyard } from '@/types';
 import { toast } from 'sonner';
@@ -46,9 +48,106 @@ export default function ModificationPage() {
   // Form states
   const [newTruck, setNewTruck] = useState({ id: '', capacity: '' });
   const [newSAT, setNewSAT] = useState({ id: '', capacity: '' });
-  const [newBin, setNewBin] = useState({ id: '', lat: '', lng: '', capacity: '', area: '' });
+  const [newBin, setNewBin] = useState({ id: '', lat: '', lng: '', capacity: '', area: '', isSmartBin: true });
   const [newStation, setNewStation] = useState({ id: '', lat: '', lng: '', capacity: '', area: '' });
   const [newDumpyard, setNewDumpyard] = useState({ id: '', lat: '', lng: '', capacity: '', name: '' });
+  
+  // Multi-select states
+  const [selectionMode, setSelectionMode] = useState<'none' | 'bins' | 'stations' | 'dumpyards' | 'trucks' | 'sats'>('none');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [bulkFillLevel, setBulkFillLevel] = useState(50);
+  
+  const toggleSelection = (id: string) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+  
+  const selectAll = (type: 'bins' | 'stations' | 'dumpyards' | 'trucks' | 'sats') => {
+    let items: string[] = [];
+    switch (type) {
+      case 'bins':
+        items = data.smartBins.map(b => b.id);
+        break;
+      case 'stations':
+        items = data.compactStations.map(s => s.id);
+        break;
+      case 'dumpyards':
+        items = data.dumpyards.map(d => d.id);
+        break;
+      case 'trucks':
+        items = data.vehicles.trucks.map(t => t.id);
+        break;
+      case 'sats':
+        items = data.vehicles.sats.map(s => s.id);
+        break;
+    }
+    setSelectedItems(new Set(items));
+  };
+  
+  const clearSelection = () => {
+    setSelectionMode('none');
+    setSelectedItems(new Set());
+  };
+  
+  const applyBulkAction = (action: 'delete' | 'setLevel') => {
+    if (selectedItems.size === 0) {
+      toast.error('No items selected');
+      return;
+    }
+    
+    if (action === 'delete') {
+      selectedItems.forEach(id => {
+        switch (selectionMode) {
+          case 'bins':
+            removeSmartBin(id);
+            break;
+          case 'stations':
+            removeCompactStation(id);
+            break;
+          case 'dumpyards':
+            removeDumpyard(id);
+            break;
+          case 'trucks':
+            removeTruck(id);
+            break;
+          case 'sats':
+            removeSAT(id);
+            break;
+        }
+      });
+      toast.success(`Deleted ${selectedItems.size} items`);
+    } else if (action === 'setLevel') {
+      selectedItems.forEach(id => {
+        switch (selectionMode) {
+          case 'bins':
+            updateBinLevel(id, bulkFillLevel);
+            break;
+          case 'stations':
+            const station = data.compactStations.find(s => s.id === id);
+            if (station) {
+              updateStationLevel(id, Math.round((bulkFillLevel / 100) * station.capacity));
+            }
+            break;
+          case 'dumpyards':
+            const dumpyard = data.dumpyards.find(d => d.id === id);
+            if (dumpyard) {
+              updateDumpyardLevel(id, Math.round((bulkFillLevel / 100) * dumpyard.capacity));
+            }
+            break;
+        }
+      });
+      toast.success(`Updated fill level for ${selectedItems.size} items`);
+    }
+    
+    clearSelection();
+  };
 
   const handleAddTruck = () => {
     if (!newTruck.id || !newTruck.capacity) {
@@ -91,10 +190,11 @@ export default function ModificationPage() {
       lng: parseFloat(newBin.lng),
       capacity: parseInt(newBin.capacity),
       currentLevel: 0,
-      area: newBin.area
+      area: newBin.area,
+      isSmartBin: newBin.isSmartBin
     });
-    setNewBin({ id: '', lat: '', lng: '', capacity: '', area: '' });
-    toast.success(`Smart Bin ${newBin.id.toUpperCase()} added successfully`);
+    setNewBin({ id: '', lat: '', lng: '', capacity: '', area: '', isSmartBin: true });
+    toast.success(`${newBin.isSmartBin ? 'Smart Bin' : 'Regular Bin'} ${newBin.id.toUpperCase()} added successfully`);
   };
 
   const handleAddStation = () => {
@@ -346,13 +446,31 @@ export default function ModificationPage() {
                 <h2 className="text-lg font-semibold text-foreground">Smart Bins</h2>
                 <span className="text-sm text-muted-foreground">({data.smartBins.length} total)</span>
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="w-4 h-4 mr-1" /> Add Bin
+              <div className="flex items-center gap-2">
+                {selectionMode === 'bins' ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => selectAll('bins')}>
+                      <CheckSquare className="w-4 h-4 mr-1" /> Select All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={clearSelection}>
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => applyBulkAction('delete')} disabled={selectedItems.size === 0}>
+                      <Trash2 className="w-4 h-4 mr-1" /> Delete ({selectedItems.size})
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setSelectionMode('bins')}>
+                    <Square className="w-4 h-4 mr-1" /> Select
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
+                )}
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Plus className="w-4 h-4 mr-1" /> Add Bin
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Add New Smart Bin</DialogTitle>
                     <DialogDescription>Enter the location and details for the new smart bin.</DialogDescription>
@@ -407,42 +525,71 @@ export default function ModificationPage() {
                         onChange={(e) => setNewBin({ ...newBin, capacity: e.target.value })}
                       />
                     </div>
-                    <Button onClick={handleAddBin} className="w-full">Add Smart Bin</Button>
+                    <div className="flex items-center space-x-3 p-3 rounded-lg bg-secondary/50">
+                      <Checkbox
+                        id="isSmartBin"
+                        checked={newBin.isSmartBin}
+                        onCheckedChange={(checked) => setNewBin({ ...newBin, isSmartBin: checked as boolean })}
+                      />
+                      <div className="flex flex-col">
+                        <Label htmlFor="isSmartBin" className="cursor-pointer font-medium">Smart Bin</Label>
+                        <span className="text-xs text-muted-foreground">Enable sensor-based fill level monitoring</span>
+                      </div>
+                    </div>
+                    <Button onClick={handleAddBin} className="w-full">Add {newBin.isSmartBin ? 'Smart' : 'Regular'} Bin</Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              </div>
             </div>
             <div className="grid gap-3 max-h-[500px] overflow-auto scrollbar-thin">
               {data.smartBins.map((bin) => (
-                <div key={bin.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
+                <div key={bin.id} className={`flex items-center justify-between p-3 rounded-lg bg-secondary/50 ${selectionMode === 'bins' && selectedItems.has(bin.id) ? 'ring-2 ring-primary' : ''}`}>
                   <div className="flex items-center gap-4 flex-1">
+                    {selectionMode === 'bins' && (
+                      <Checkbox
+                        checked={selectedItems.has(bin.id)}
+                        onCheckedChange={() => toggleSelection(bin.id)}
+                      />
+                    )}
                     <div className="min-w-[80px]">
-                      <span className="font-medium text-foreground">{bin.id}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-foreground">{bin.id}</span>
+                        {bin.isSmartBin && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-smartbin/20 text-smartbin">SMART</span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{bin.area}</p>
                     </div>
                     <div className="text-sm text-muted-foreground min-w-[120px]">
                       {bin.lat.toFixed(4)}, {bin.lng.toFixed(4)}
                     </div>
-                    <div className="flex items-center gap-3 flex-1 max-w-[200px]">
-                      <Slider
-                        value={[bin.currentLevel]}
-                        onValueChange={(value) => updateBinLevel(bin.id, value[0])}
-                        max={100}
-                        step={1}
-                        className="flex-1"
-                      />
-                      <span className={`text-xs font-medium min-w-[35px] ${
-                        bin.currentLevel > 80 ? 'text-destructive' : 
-                        bin.currentLevel > 50 ? 'text-warning' : 'text-success'
-                      }`}>{bin.currentLevel}%</span>
-                    </div>
+                    {bin.isSmartBin ? (
+                      <div className="flex items-center gap-3 flex-1 max-w-[200px]">
+                        <Slider
+                          value={[bin.currentLevel]}
+                          onValueChange={(value) => updateBinLevel(bin.id, value[0])}
+                          max={100}
+                          step={1}
+                          className="flex-1"
+                        />
+                        <span className={`text-xs font-medium min-w-[35px] ${
+                          bin.currentLevel > 80 ? 'text-destructive' : 
+                          bin.currentLevel > 50 ? 'text-warning' : 'text-success'
+                        }`}>{bin.currentLevel}%</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>Capacity: {bin.capacity}L</span>
+                      </div>
+                    )}
                   </div>
                   <Button 
                     variant="ghost" 
                     size="icon"
                     onClick={() => {
                       removeSmartBin(bin.id);
-                      toast.success(`Smart Bin ${bin.id} removed`);
+                      toast.success(`Bin ${bin.id} removed`);
                     }}
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />

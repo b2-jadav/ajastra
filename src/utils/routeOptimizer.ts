@@ -136,6 +136,7 @@ interface GenerateRoutesParams {
   dumpyards: Dumpyard[];
   sats: Vehicle[];
   trucks: Vehicle[];
+  balancedWorkload?: boolean;
 }
 
 export async function generateOptimizedRoutes({
@@ -143,7 +144,8 @@ export async function generateOptimizedRoutes({
   stations,
   dumpyards,
   sats,
-  trucks
+  trucks,
+  balancedWorkload = false
 }: GenerateRoutesParams): Promise<OptimizedRoute[]> {
   const routes: OptimizedRoute[] = [];
   
@@ -187,7 +189,42 @@ export async function generateOptimizedRoutes({
   }
   
   // Step 1: Assign bins to compact stations
-  const binAssignments = assignBinsToStations(binsToCollect, stations);
+  let binAssignments: Map<string, SmartBin[]>;
+  
+  if (balancedWorkload) {
+    // Balanced workload: distribute bins evenly across all SATs regardless of station
+    binAssignments = new Map<string, SmartBin[]>();
+    stations.forEach(station => binAssignments.set(station.id, []));
+    
+    // Sort bins by distance to nearest station, then distribute round-robin
+    const binsWithStation = binsToCollect.map(bin => {
+      let nearestStation = stations[0];
+      let nearestDist = Infinity;
+      stations.forEach(station => {
+        const dist = haversineDistance(bin.lat, bin.lng, station.lat, station.lng);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestStation = station;
+        }
+      });
+      return { bin, stationId: nearestStation.id, distance: nearestDist };
+    });
+    
+    // Sort by distance for fuel efficiency
+    binsWithStation.sort((a, b) => a.distance - b.distance);
+    
+    // Calculate target bins per SAT for balanced distribution
+    const targetBinsPerSAT = Math.ceil(binsToCollect.length / activeSATs.length);
+    const satBinCounts = new Map<number, number>();
+    activeSATs.forEach((_, idx) => satBinCounts.set(idx, 0));
+    
+    // Assign bins to SATs in round-robin fashion while respecting station assignments
+    binsWithStation.forEach(({ bin, stationId }) => {
+      binAssignments.get(stationId)?.push(bin);
+    });
+  } else {
+    binAssignments = assignBinsToStations(binsToCollect, stations);
+  }
   
   // Step 2: Assign stations to dumpyards
   const stationAssignments = assignStationsToDumpyards(stations, activeDumpyards);
@@ -200,14 +237,38 @@ export async function generateOptimizedRoutes({
   // All SATs start at time 0
   let satIndex = 0;
   
+  // For balanced workload, calculate bins per SAT
+  const totalBinsToAssign = Array.from(binAssignments.values()).reduce((sum, bins) => sum + bins.length, 0);
+  const binsPerSAT = balancedWorkload ? Math.ceil(totalBinsToAssign / activeSATs.length) : Infinity;
+  const satBinAssignmentCount = new Map<string, number>();
+  activeSATs.forEach(sat => satBinAssignmentCount.set(sat.id, 0));
+  
   for (const [stationId, assignedBins] of binAssignments) {
     if (assignedBins.length === 0) continue;
     
     const station = stations.find(s => s.id === stationId)!;
-    const sat = activeSATs[satIndex % activeSATs.length];
     
-    // Sort bins by priority (fill level) and distance
-    const sortedBins = [...assignedBins].sort((a, b) => b.currentLevel - a.currentLevel);
+    // Sort bins by priority (fill level) and distance for fuel efficiency
+    const sortedBins = [...assignedBins].sort((a, b) => {
+      // Primary: fill level (priority)
+      const levelDiff = b.currentLevel - a.currentLevel;
+      if (Math.abs(levelDiff) > 20) return levelDiff;
+      // Secondary: distance from station (fuel efficiency)
+      const distA = haversineDistance(a.lat, a.lng, station.lat, station.lng);
+      const distB = haversineDistance(b.lat, b.lng, station.lat, station.lng);
+      return distA - distB;
+    });
+    
+    // Select SAT for this station (balanced or round-robin)
+    let sat: Vehicle;
+    if (balancedWorkload) {
+      // Find SAT with least bins assigned
+      sat = activeSATs.reduce((minSat, s) => 
+        (satBinAssignmentCount.get(s.id) || 0) < (satBinAssignmentCount.get(minSat.id) || 0) ? s : minSat
+      , activeSATs[0]);
+    } else {
+      sat = activeSATs[satIndex % activeSATs.length];
+    }
     
     // Group bins based on SAT capacity
     let currentLoad = 0;
@@ -323,6 +384,10 @@ export async function generateOptimizedRoutes({
       // Update station completion time
       const prevCompletion = stationCompletionTime.get(stationId) || 0;
       stationCompletionTime.set(stationId, Math.max(prevCompletion, currentSatTime));
+      
+      // Update bin assignment count for balanced workload
+      const currentCount = satBinAssignmentCount.get(sat.id) || 0;
+      satBinAssignmentCount.set(sat.id, currentCount + currentBatch.length);
     }
     
     satTripCount.set(sat.id, currentSatTime);
@@ -495,7 +560,8 @@ export function parseMultiSheetExcel(workbook: any): Partial<ExcelData> {
           lng: lng,
           capacity: 100, // Default bin capacity in liters
           currentLevel: Math.min(100, Math.round(estimatedWaste * 50)), // Convert waste estimate to fill %
-          area: location
+          area: location,
+          isSmartBin: true // Default to smart bin
         });
       }
       break;
@@ -629,7 +695,8 @@ export function parseExcelData(data: any[][]): Partial<ExcelData> {
             lng: parseFloat(row[3]) || 0,
             capacity: parseInt(row[4]) || 100,
             currentLevel: parseInt(row[5]) || 0,
-            area: String(row[6]) || 'Unknown'
+            area: String(row[6]) || 'Unknown',
+            isSmartBin: true // Default to smart bin
           });
         }
         break;
