@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { Database, SmartBin, CompactStation, Dumpyard, Vehicle, OptimizedRoute } from '@/types';
 import initialData from '@/data/database.json';
 
+const STORAGE_KEY = 'ajastra_data';
+const ROUTES_STORAGE_KEY = 'ajastra_routes';
+
 interface DataContextType {
   data: Database;
   updateData: (newData: Database) => void;
@@ -24,17 +27,77 @@ interface DataContextType {
   setRoutes: (routes: OptimizedRoute[]) => void;
   isGeneratingRoutes: boolean;
   setIsGeneratingRoutes: (value: boolean) => void;
+  clearStoredData: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// Load data from localStorage or use initial data
+function loadStoredData(): Database {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Validate structure
+      if (parsed.vehicles && parsed.smartBins !== undefined) {
+        return parsed as Database;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load stored data:', error);
+  }
+  return initialData as Database;
+}
+
+// Load routes from localStorage
+function loadStoredRoutes(): OptimizedRoute[] {
+  try {
+    const stored = localStorage.getItem(ROUTES_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored) as OptimizedRoute[];
+    }
+  } catch (error) {
+    console.warn('Failed to load stored routes:', error);
+  }
+  return [];
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<Database>(initialData as Database);
-  const [routes, setRoutes] = useState<OptimizedRoute[]>([]);
+  const [data, setData] = useState<Database>(() => loadStoredData());
+  const [routes, setRoutesState] = useState<OptimizedRoute[]>(() => loadStoredRoutes());
   const [isGeneratingRoutes, setIsGeneratingRoutes] = useState(false);
+
+  // Persist data to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.warn('Failed to save data to localStorage:', error);
+    }
+  }, [data]);
+
+  // Persist routes to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(ROUTES_STORAGE_KEY, JSON.stringify(routes));
+    } catch (error) {
+      console.warn('Failed to save routes to localStorage:', error);
+    }
+  }, [routes]);
 
   const updateData = (newData: Database) => {
     setData(newData);
+  };
+
+  const setRoutes = (newRoutes: OptimizedRoute[]) => {
+    setRoutesState(newRoutes);
+  };
+
+  const clearStoredData = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(ROUTES_STORAGE_KEY);
+    setData(initialData as Database);
+    setRoutesState([]);
   };
 
   const addSmartBin = (bin: SmartBin) => {
@@ -192,7 +255,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       routes,
       setRoutes,
       isGeneratingRoutes,
-      setIsGeneratingRoutes
+      setIsGeneratingRoutes,
+      clearStoredData
     }}>
       {children}
     </DataContext.Provider>

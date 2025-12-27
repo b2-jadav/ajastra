@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Home, Edit3, Route, Settings, LogOut, Truck, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import logoDark from '@/assets/logo-dark.jpg';
+import logoLight from '@/assets/logo-light.jpg';
 
 type TabType = 'home' | 'modification' | 'routes' | 'settings';
 
@@ -20,6 +22,20 @@ const tabs = [
 
 export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const { user, logout } = useAuth();
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    setIsDarkMode(saved ? saved === 'dark' : true);
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(!document.documentElement.classList.contains('light'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    
+    return () => observer.disconnect();
+  }, []);
 
   const accessibleTabs = tabs.filter(tab => 
     !tab.adminOnly || user?.role === 'admin'
@@ -34,11 +50,15 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       {/* Logo Section */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Route className="w-5 h-5 text-primary" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center">
+            <img 
+              src={isDarkMode ? logoDark : logoLight} 
+              alt="AJΔSTRA Logo" 
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
-            <h1 className="font-bold text-foreground">HydWaste</h1>
+            <h1 className="font-bold text-foreground">AJΔSTRA</h1>
             <p className="text-xs text-muted-foreground">Route Optimizer</p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Truck, User, AlertCircle, LogIn, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { UserRole } from '@/types';
+import logoDark from '@/assets/logo-dark.jpg';
+import logoLight from '@/assets/logo-light.jpg';
 
 export default function LoginPage() {
   const [role, setRole] = useState<UserRole | null>(null);
@@ -14,6 +16,12 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const { login } = useAuth();
   const { data } = useData();
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    setIsDarkMode(saved ? saved === 'dark' : true);
+  }, []);
 
   const handleLogin = () => {
     setError('');
@@ -82,11 +90,15 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 mb-4 glow">
-            <MapPin className="w-10 h-10 text-primary" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-background/50 border border-primary/20 mb-4 overflow-hidden">
+            <img 
+              src={isDarkMode ? logoDark : logoLight} 
+              alt="AJΔSTRA Logo" 
+              className="w-full h-full object-cover"
+            />
           </div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">HydWaste Routes</h1>
-          <p className="text-muted-foreground">Hyderabad Waste Management System</p>
+          <h1 className="text-3xl font-bold gradient-text mb-2">AJΔSTRA</h1>
+          <p className="text-muted-foreground text-sm">AI System for Smart Transport Routing Analytics</p>
         </motion.div>
 
         {/* Login Card */}
@@ -184,7 +196,7 @@ export default function LoginPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          Powered by AI Route Optimization
+          Powered by AJΔSTRA
         </motion.p>
       </motion.div>
     </div>
