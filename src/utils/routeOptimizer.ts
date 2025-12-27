@@ -243,11 +243,11 @@ export async function generateOptimizedRoutes({
   
   // Step 2: Generate SAT routes based on workload mode
   if (balancedWorkload) {
-    // BALANCED WORKLOAD: Distribute bins evenly across ALL available SATs
-    // Each SAT gets roughly equal number of bins, sorted by proximity to reduce fuel
+    // BALANCED WORKLOAD: True round-robin distribution across ALL SATs
+    // This ensures every active SAT gets bins, distributing workload evenly
     
-    // Sort bins by fill level (priority) and group by nearest station
-    const binsWithInfo = binsToCollect.map(bin => {
+    // First, assign each bin to its nearest station
+    const binsWithStation = binsToCollect.map(bin => {
       let nearestStation = stations[0];
       let nearestDist = Infinity;
       stations.forEach(station => {
@@ -260,38 +260,40 @@ export async function generateOptimizedRoutes({
       return { bin, station: nearestStation, distance: nearestDist };
     });
     
-    // Sort by fill level (descending) then by distance (ascending) for fuel efficiency
-    binsWithInfo.sort((a, b) => {
-      const levelDiff = b.bin.currentLevel - a.bin.currentLevel;
-      if (Math.abs(levelDiff) > 10) return levelDiff;
-      return a.distance - b.distance;
-    });
+    // Sort by fill level (high priority first) for collection urgency
+    binsWithStation.sort((a, b) => b.bin.currentLevel - a.bin.currentLevel);
     
-    // Calculate bins per SAT (distribute evenly)
-    const binsPerSAT = Math.ceil(binsToCollect.length / activeSATs.length);
+    // TRUE ROUND-ROBIN: Assign bins one by one to each SAT in turn
+    const satAssignments = new Map<string, { bin: SmartBin, station: CompactStation }[]>();
+    activeSATs.forEach(sat => satAssignments.set(sat.id, []));
     
-    // Assign bins to SATs in round-robin fashion
-    const satBinAssignments = new Map<string, { bin: typeof binsWithInfo[0], station: CompactStation }[]>();
-    activeSATs.forEach(sat => satBinAssignments.set(sat.id, []));
-    
-    binsWithInfo.forEach((binInfo, idx) => {
-      const satIdx = Math.floor(idx / binsPerSAT) % activeSATs.length;
+    binsWithStation.forEach((item, idx) => {
+      // Round-robin: bin 0 -> SAT 0, bin 1 -> SAT 1, ..., bin N -> SAT (N % numSATs)
+      const satIdx = idx % activeSATs.length;
       const sat = activeSATs[satIdx];
-      satBinAssignments.get(sat.id)?.push({ bin: binInfo, station: binInfo.station });
+      satAssignments.get(sat.id)?.push({ bin: item.bin, station: item.station });
     });
     
-    // Generate routes for each SAT
-    for (const sat of activeSATs) {
-      const assignedBins = satBinAssignments.get(sat.id) || [];
-      if (assignedBins.length === 0) continue;
+    console.log('Balanced workload assignments:');
+    activeSATs.forEach(sat => {
+      const assigned = satAssignments.get(sat.id) || [];
+      console.log(`  ${sat.id}: ${assigned.length} bins`);
+    });
+    
+    // Generate routes for EACH SAT that has bins
+    for (let satIdx = 0; satIdx < activeSATs.length; satIdx++) {
+      const sat = activeSATs[satIdx];
+      const assignedItems = satAssignments.get(sat.id) || [];
       
-      // Group bins by their target station
+      if (assignedItems.length === 0) continue;
+      
+      // Group this SAT's bins by station
       const binsByStation = new Map<string, SmartBin[]>();
-      assignedBins.forEach(({ bin, station }) => {
+      assignedItems.forEach(({ bin, station }) => {
         if (!binsByStation.has(station.id)) {
           binsByStation.set(station.id, []);
         }
-        binsByStation.get(station.id)?.push(bin.bin);
+        binsByStation.get(station.id)?.push(bin);
       });
       
       let currentSatTime = 0;
@@ -301,14 +303,14 @@ export async function generateOptimizedRoutes({
       for (const [stationId, stationBins] of binsByStation) {
         const station = stations.find(s => s.id === stationId)!;
         
-        // Sort bins by distance from station for fuel efficiency
+        // Sort by distance from station for fuel efficiency
         const sortedBins = [...stationBins].sort((a, b) => {
           const distA = haversineDistance(a.lat, a.lng, station.lat, station.lng);
           const distB = haversineDistance(b.lat, b.lng, station.lat, station.lng);
           return distA - distB;
         });
         
-        // Group by capacity
+        // Batch by vehicle capacity
         let currentLoad = 0;
         let currentBatch: SmartBin[] = [];
         
@@ -319,6 +321,7 @@ export async function generateOptimizedRoutes({
             currentBatch.push(bin);
             currentLoad += binWeight;
           } else {
+            // Flush current batch
             if (currentBatch.length > 0) {
               const route = await createSATRoute(sat, currentBatch, station, tripNumber, currentSatTime);
               routes.push(route);
