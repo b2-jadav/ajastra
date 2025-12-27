@@ -4,6 +4,8 @@ import { Settings, User, Palette, Bell, Shield, Info, Sun, Moon } from 'lucide-r
 import { useAuth } from '@/context/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import logoDark from '@/assets/logo-dark.jpg';
+import logoLight from '@/assets/logo-light.jpg';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -188,12 +190,22 @@ export default function SettingsPage() {
           
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-secondary/50">
-              <p className="font-medium text-foreground">HydWaste Route Optimizer</p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <div className="flex items-center gap-4 mb-3">
+                <img 
+                  src={isDarkMode ? logoDark : logoLight} 
+                  alt="AJΔSTRA Logo" 
+                  className="w-12 h-12 rounded-lg object-cover"
+                />
+                <div>
+                  <p className="font-bold text-foreground text-lg">AJΔSTRA</p>
+                  <p className="text-xs text-muted-foreground">AI System for Smart Transport Routing Analytics</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-3">
                 Version 1.0.0
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                AI-powered waste management route optimization system for Hyderabad. 
+                AI-powered waste management route optimization system. 
                 Uses OSRM for road network routing and advanced algorithms for 
                 optimal route planning.
               </p>
