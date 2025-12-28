@@ -118,7 +118,7 @@ The AJASTRA system is now live and fully responsive on all devices, including mo
 
 ## 👥 Developer
 
-**Created by:** b2-jadav
+**Created by:** team-ajastra
 **Contact:** [GitHub Profile](https://github.com/b2-jadav)
 
 ---
