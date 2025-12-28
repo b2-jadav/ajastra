@@ -45,7 +45,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     <motion.div
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col"
+      className="w-full md:w-64 min-h-screen md:h-screen bg-sidebar border-r border-sidebar-border flex flex-col"
     >
       {/* Logo Section */}
       <div className="p-6 border-b border-sidebar-border">
