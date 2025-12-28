@@ -84,3 +84,49 @@ git clone https://github.com/Team-Ajastra/AJASTRA.git
 cd AJASTRA
 npm install
 npm run dev
+
+## 🚀 Live Demo
+
+**Visit the live application:** https://ajastra.netlify.app/
+
+The AJASTRA system is now live and fully responsive on all devices, including mobile phones, tablets, and desktops. Try signing in with the admin or driver role to explore the interactive waste collection routing interface.
+
+---
+
+## 📱 Responsive Design
+
+✅ **Fully mobile-responsive interface**
+- Works seamlessly on devices from 320px (mobile phones) to 4K+ screens
+- Optimized for Samsung Galaxy S20 Ultra and all modern devices
+- Vertical scrolling content below navigation on mobile
+- Sidebar adapts from full-width (mobile) to fixed sidebar (desktop)
+
+---
+
+## 📚 Key Achievements
+
+✨ **Recently Implemented:**
+- Responsive UI design with Tailwind CSS breakpoints
+- Interactive route optimization visualization
+- Real-time map-based route display using Leaflet.js
+- Admin and driver role-based dashboard views
+- Dynamic route generation with OSRM integration
+- Mobile-first responsive layout
+- Dark/Light theme toggle support
+
+---
+
+## 👥 Developer
+
+**Created by:** b2-jadav
+**Contact:** [GitHub Profile](https://github.com/b2-jadav)
+
+---
+
+## 📋 License
+
+This project is open source. Feel free to fork, modify, and contribute to improve waste collection routing systems.
+
+---
+
+**Happy Routing! 🗺️♻️**
