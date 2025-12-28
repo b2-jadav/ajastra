@@ -1,73 +1,86 @@
-# Welcome to your Lovable project
+# AJASTRA 🚛♻️  
+**Optimized Waste Collection Routing System**
 
-## Project info
+🔗 **GitHub Repository:**  
+https://github.com/Team-Ajastra/AJASTRA.git
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
-## How can I edit this code?
 
-There are several ways of editing your application.
+## 📌 Overview
+AJASTRA is a prototype web-based system designed to optimize waste collection and transportation routes from **Garbage Vulnerable Points (GVPs)** to **Secondary Collection & Transfer Points (SCTPs)**.  
+The project focuses on improving operational efficiency, reducing fuel consumption, and enabling smarter waste logistics through optimized routing and visualization.
 
-**Use Lovable**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
 
-Changes made via Lovable will be committed automatically to this repo.
+## ❓ Problem Statement
+Traditional waste collection systems often rely on static or manually planned routes, leading to inefficient fuel usage, delayed pickups, and higher operational costs.  
+There is a need for an optimized routing model that can account for real-world operational parameters and generate efficient waste collection routes under varying conditions.
 
-**Use your preferred IDE**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 💡 Proposed Solution
+AJASTRA provides an intelligent routing prototype that:
+- Generates optimized routes for waste collection vehicles
+- Supports multiple types of trucks (SATs and large trucks)
+- Visualizes routes on an interactive map
+- Presents data through a clean, modern dashboard interface
 
-Follow these steps:
+The system is designed to assist municipal authorities and waste management planners in making data-driven routing decisions.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+## ✨ Key Features
+- ✅ Optimized waste collection routes  
+- ✅ Support for multiple truck types  
+- ✅ Map-based route visualization  
+- ✅ Interactive dashboard UI  
+- ✅ OSRM-based routing engine integration  
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+
+## 🧠 Routing & Optimization
+- Uses **OSRM (Open Source Routing Machine)** for route computation.
+- Designed to handle real-world routing constraints and scalable for future enhancements.
+
+
+
+## 🛠️ Tech Stack
+### Frontend
+- React  
+- TypeScript  
+- Vite  
+- Tailwind CSS  
+- shadcn/ui  
+
+### Routing & Mapping
+- OSRM  
+- Map-based visualization  
+
+### Tools
+- Git & GitHub
+
+
+
+## 📊 Project Status
+🚧 **Prototype Stage**
+- Functional UI
+- Route optimization logic integrated
+- Simulated/static data for demonstration
+
+
+
+## 📱 Future Scope
+- Mobile application support  
+- Real-time GPS and vehicle tracking  
+- Traffic-aware dynamic routing  
+- Manual route editing  
+- Integration with municipal systems  
+- ML-based route and demand prediction  
+
+
+
+## ▶️ How to Run Locally
+```bash
+git clone https://github.com/Team-Ajastra/AJASTRA.git
+cd AJASTRA
+npm install
 npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
