@@ -2,7 +2,7 @@
 **Optimized Waste Collection Routing System**
 
 🔗 **GitHub Repository:**  
-https://github.com/Team-Ajastra/AJASTRA.git
+https://github.com/b2-jadav/ajastra.git
 
 
 
@@ -80,7 +80,7 @@ The system is designed to assist municipal authorities and waste management plan
 
 ## ▶️ How to Run Locally
 ```bash
-git clone https://github.com/Team-Ajastra/AJASTRA.git
+git clone https://github.com/b2-jadav/ajastra.git
 cd AJASTRA
 npm install
 npm run dev
