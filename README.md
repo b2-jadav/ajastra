@@ -84,6 +84,7 @@ git clone https://github.com/b2-jadav/ajastra.git
 cd AJASTRA
 npm install
 npm run dev
+```
 
 ## 🚀 Live Demo
 
@@ -133,18 +134,6 @@ This project is open source. Feel free to fork, modify, and contribute to improv
 
 ---
 
-## 🎬 Screenshots & Demo
-
-### Dashboard Preview
-- Admin dashboard with route visualization
-- Driver interface for assigned routes
-- Real-time map view with optimized routes
-- Dark/Light theme support
-
-> Visit the [live demo](https://ajastra.netlify.app/) to see the application in action!
-
----
-
 ## 📦 Installation & Setup
 
 ### Prerequisites
@@ -158,7 +147,7 @@ Create a `.env.local` file in the root directory:
 ```env
 VITE_OSRM_API_URL=http://your-osrm-server:5000
 VITE_MAP_API_KEY=your-leaflet-api-key
-```
+
 
 ### Troubleshooting Setup Issues
 
