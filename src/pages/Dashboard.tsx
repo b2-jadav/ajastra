@@ -35,7 +35,7 @@ export default function Dashboard() {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -20 }}
         transition={{ duration: 0.2 }}
-        className="flex-1 overflow-hidden w-full md:w-auto"
+        className="flex-1 overflow-y-auto md:overflow-hidden w-full md:w-auto"
       >
         {renderContent()}
       </motion.main>
