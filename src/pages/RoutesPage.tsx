@@ -194,9 +194,9 @@ export default function RoutesPage() {
   const truckRoutes = displayedRoutes.filter(r => r.vehicleType === 'truck');
 
   return (
-    <div className="h-full overflow-auto p-6 scrollbar-thin">
+    <div className="h-full overflow-auto p-2 sm:p-4 md:p-6 scrollbar-thin scrollbar-thin">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Route Optimization</h1>
+        <h1 className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">Route Optimization</h1>
         <p className="text-muted-foreground">AI-powered route generation for waste collection</p>
       </div>
 
@@ -215,7 +215,7 @@ export default function RoutesPage() {
               <h2 className="text-lg font-semibold text-foreground">Generate Optimized Routes</h2>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6">
               {/* Route Generation */}
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
@@ -357,7 +357,7 @@ export default function RoutesPage() {
                 <Route className="w-4 h-4" />
                 <span className="text-sm">{user?.role === 'driver' ? 'Your Routes' : 'Total Routes'}</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{displayedRoutes.length}</p>
+              <p className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">{displayedRoutes.length}</p>
             </div>
             
             <div className="glass rounded-xl p-4">
@@ -365,7 +365,7 @@ export default function RoutesPage() {
                 <MapPin className="w-4 h-4" />
                 <span className="text-sm">Total Distance</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{totalDistance.toFixed(1)} km</p>
+              <p className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">{totalDistance.toFixed(1)} km</p>
             </div>
             
             <div className="glass rounded-xl p-4">
@@ -373,7 +373,7 @@ export default function RoutesPage() {
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">Est. Time</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{Math.round(totalTime)} min</p>
+              <p className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">{Math.round(totalTime)} min</p>
             </div>
             
             <div className="glass rounded-xl p-4">
@@ -381,7 +381,7 @@ export default function RoutesPage() {
                 <Truck className="w-4 h-4" />
                 <span className="text-sm">Vehicles</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">
                 {satRoutes.length} SAT, {truckRoutes.length} Truck
               </p>
             </div>
