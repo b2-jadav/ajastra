@@ -232,9 +232,9 @@ export default function ModificationPage() {
   };
 
   return (
-    <div className="h-full overflow-auto p-6 scrollbar-thin">
+    <div className="h-full overflow-auto p-2 sm:p-4 md:p-6 scrollbar-thin scrollbar-thin">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Asset Management</h1>
+        <h1 className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">Asset Management</h1>
         <p className="text-muted-foreground">Add, remove, and manage all waste management assets</p>
       </div>
 
