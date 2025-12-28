@@ -26,9 +26,9 @@ export default function SettingsPage() {
   }, [isDarkMode]);
 
   return (
-    <div className="h-full overflow-auto p-6 scrollbar-thin">
+    <div className="h-full overflow-auto p-2 sm:p-4 md:p-6 scrollbar-thin scrollbar-thin">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+        <h1 className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground">Manage your preferences and account settings</p>
       </div>
 
