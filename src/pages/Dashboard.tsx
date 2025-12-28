@@ -27,7 +27,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden flex-col md:flex-row">
+    <div className="flex min-h-screen bg-background flex-col md:flex-row md:overflow-hidden">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <motion.main
         key={activeTab}
