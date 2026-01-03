@@ -43,6 +43,7 @@ export interface Dumpyard {
   capacity: number;
   currentLevel: number;
   name: string;
+  isPermanent?: boolean
 }
 
 export interface User {
