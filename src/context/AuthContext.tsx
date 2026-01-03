@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';;
+import bcrypt from 'bcryptjs'
 import { User, UserRole } from '@/types';
 
 interface AuthContextType {
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!password) return false;
       
       const storedHash = localStorage.getItem(ADMIN_PASSWORD_KEY) || btoa(DEFAULT_ADMIN_PASSWORD);
-      const providedHash = btoa(password);
+      const providedHash = btoa(password);  // TODO: For production, replace btoa() with: await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10)
       
       if (storedHash === providedHash) {
         setUser({ role: 'admin', vehicleId: undefined });
