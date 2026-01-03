@@ -770,3 +770,64 @@ export function parseExcelData(data: any[][]): Partial<ExcelData> {
   
   return result;
 }
+
+// Optimized load balancing algorithm
+export function optimizeLoadBalancing(
+  vehicles: Vehicle[],
+  smartBins: SmartBin[]
+): Map<string, SmartBin[]> {
+  // Filter active vehicles and sort by capacity (ascending)
+  const activeVehicles = vehicles
+    .filter(v => v.status === 'active')
+    .sort((a, b) => a.capacity - b.capacity);
+
+  if (activeVehicles.length === 0) return new Map();
+
+  // Calculate target vehicle count (85% of available vehicles)
+  const targetVehicleCount = Math.max(
+    1,
+    Math.ceil(activeVehicles.length * 0.85)
+  );
+
+  // Sort bins by fill level (descending) - prioritize full bins
+  const sortedBins = [...smartBins].sort(
+    (a, b) => b.currentLevel - a.currentLevel
+  );
+
+  // Initialize route map
+  const routes = new Map<string, SmartBin[]>();
+  const vehicleLoads = new Map<string, number>();
+
+  // Assign empty arrays and track loads for selected vehicles
+  activeVehicles.slice(0, targetVehicleCount).forEach(vehicle => {
+    routes.set(vehicle.id, []);
+    vehicleLoads.set(vehicle.id, 0);
+  });
+
+  // Distribute bins using greedy algorithm (assign to vehicle with lowest current load)
+  sortedBins.forEach(bin => {
+    let minLoadVehicle: string | null = null;
+    let minLoad = Infinity;
+
+    routes.forEach((_, vehicleId) => {
+      const currentLoad = vehicleLoads.get(vehicleId) || 0;
+      if (currentLoad < minLoad) {
+        minLoad = currentLoad;
+        minLoadVehicle = vehicleId;
+      }
+    });
+
+    if (minLoadVehicle) {
+      routes.get(minLoadVehicle)?.push(bin);
+      const currentCapacity = activeVehicles.find(
+        v => v.id === minLoadVehicle
+      )?.capacity || 5000;
+      vehicleLoads.set(
+        minLoadVehicle,
+        (vehicleLoads.get(minLoadVehicle) || 0) + bin.capacity
+      );
+    }
+  });
+
+  return routes;
+}
