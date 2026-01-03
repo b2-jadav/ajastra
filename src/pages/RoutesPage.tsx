@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useData } from '@/context/DataContext';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';;
+import { useGlobalSearch } from '@/hooks/useGlobalSearch'
 import { generateOptimizedRoutes, parseExcelData, parseMultiSheetExcel } from '@/utils/routeOptimizer';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -20,7 +21,18 @@ export default function RoutesPage() {
   const { data, routes, setRoutes, isGeneratingRoutes, setIsGeneratingRoutes, updateData } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
-  const [balancedWorkload, setBalancedWorkload] = useState(false);
+  const [balancedWorkload, setBalancedWorkload] = useState(false);;
+  const { search } = useGlobalSearch();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+
+  const handleVehicleSearch = (query: string) => {
+    setSearchQuery(query);
+    const result = search(query);
+    if (result?.type === 'vehicle') {
+      setSelectedVehicle(result.id);
+    }
+  }
 
   // Filter routes for drivers - they only see their own vehicle's routes
   const displayedRoutes = useMemo(() => {
