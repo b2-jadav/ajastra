@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { Trash2, Building2, MapPin, Filter } from 'lucide-react';
 import MapWrapper from '@/components/MapWrapper';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { useData } from '@/context/DataContext';
+import { useData } from '@/context/DataContext';;
+import { useAuth } from '@/context/AuthContext'
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -12,7 +13,27 @@ export default function HomePage() {
   const [showSmartBins, setShowSmartBins] = useState(true);
   const [showCompactStations, setShowCompactStations] = useState(true);
   const [showDumpyards, setShowDumpyards] = useState(true);
+;
+  const { user } = useAuth();
 
+  // Filter routes for driver view
+  const visibleRoutes = user?.role === 'driver'
+    ? data.routes?.filter(r => r.vehicleId === user.vehicleId)
+    : data.routes;
+
+  // Filter vehicles for driver view
+  const visibleVehicles = user?.role === 'driver'
+    ? [...data.vehicles.trucks, ...data.vehicles.sats].filter(v => v.id === user.vehicleId)
+    : [...data.vehicles.trucks, ...data.vehicles.sats];
+
+  // Filter bins for driver view
+  const visibleBins = user?.role === 'driver'
+    ? data.smartBins.filter(bin =>
+        visibleRoutes?.some(route =>
+          route.stops?.some(stop => stop.id === bin.id)
+        )
+      )
+    : data.smartBins
   const stats = [
     {
       label: 'Smart Bins',
