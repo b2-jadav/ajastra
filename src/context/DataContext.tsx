@@ -158,6 +158,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ...prev,
       dumpyards: prev.dumpyards.filter(dy => dy.id !== id)
     }));
+    const dumpyard = data.dumpyards.find(d => d.id === id);
+    if (dumpyard?.isPermanent) {
+      toast.error('Cannot delete permanent dumpyard');
+      return;
+    }
   };
 
   const updateDumpyardLevel = (id: string, level: number) => {
