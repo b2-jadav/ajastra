@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Route, Play, Loader2, FileSpreadsheet, 
   Truck, Package, Clock, MapPin, AlertCircle, CheckCircle2,
-  Download, Search, ChevronDown, ChevronUp
+  Download, Search, ChevronDown, ChevronUp, XCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -193,9 +193,19 @@ export default function RoutesPage() {
     });
   };
 
-  // Filter routes by search query (admin only)
+  // Filter routes by search query (admin only) - exact match
   const filteredRoutes = user?.role === 'admin' && searchQuery
-    ? routes.filter(r => r.vehicleId.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? routes.filter(r => {
+        const query = searchQuery.toLowerCase().trim();
+        const id = r.vehicleId.toLowerCase();
+        if (id === query) return true;
+        // Match complete segment only (SAT-4T-1 should not match SAT-4T-10)
+        if (id.startsWith(query)) {
+          const nextChar = id[query.length];
+          return !nextChar || !/[a-z0-9]/i.test(nextChar);
+        }
+        return false;
+      })
     : routes;
 
   const totalDistance = routes.reduce((sum, r) => sum + r.totalDistance, 0);
@@ -353,6 +363,21 @@ export default function RoutesPage() {
                   </>
                 )}
               </Button>
+              
+              {routes.length > 0 && (
+                <Button 
+                  onClick={() => {
+                    setRoutes([]);
+                    toast.success('All routes cleared');
+                  }}
+                  variant="outline"
+                  size="lg"
+                  className="w-full mt-2"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Clear Routes
+                </Button>
+              )}
             </div>
 
             {/* Excel Upload */}
