@@ -19,21 +19,21 @@
     ]
   },
   "smartBins": [
-    { "id": "BIN001", "lat": 17.3850, "lng": 78.4867, "capacity": 100, "currentLevel": 85, "area": "Hitech City" },
-    { "id": "BIN002", "lat": 17.4156, "lng": 78.4347, "capacity": 100, "currentLevel": 45, "area": "Kukatpally" },
-    { "id": "BIN003", "lat": 17.4399, "lng": 78.3489, "capacity": 120, "currentLevel": 92, "area": "Miyapur" },
-    { "id": "BIN004", "lat": 17.4401, "lng": 78.5018, "capacity": 100, "currentLevel": 30, "area": "Secunderabad" },
-    { "id": "BIN005", "lat": 17.3616, "lng": 78.4747, "capacity": 80, "currentLevel": 78, "area": "Banjara Hills" },
-    { "id": "BIN006", "lat": 17.3950, "lng": 78.4750, "capacity": 100, "currentLevel": 65, "area": "Madhapur" },
-    { "id": "BIN007", "lat": 17.4260, "lng": 78.4540, "capacity": 90, "currentLevel": 88, "area": "KPHB" },
-    { "id": "BIN008", "lat": 17.3700, "lng": 78.5380, "capacity": 100, "currentLevel": 55, "area": "LB Nagar" },
-    { "id": "BIN009", "lat": 17.4480, "lng": 78.3910, "capacity": 110, "currentLevel": 72, "area": "Chandanagar" },
-    { "id": "BIN010", "lat": 17.3560, "lng": 78.4010, "capacity": 100, "currentLevel": 95, "area": "Tolichowki" },
-    { "id": "BIN011", "lat": 17.4100, "lng": 78.5200, "capacity": 85, "currentLevel": 40, "area": "Uppal" },
-    { "id": "BIN012", "lat": 17.3280, "lng": 78.4130, "capacity": 100, "currentLevel": 82, "area": "Attapur" },
-    { "id": "BIN013", "lat": 17.4020, "lng": 78.3650, "capacity": 95, "currentLevel": 60, "area": "Kondapur" },
-    { "id": "BIN014", "lat": 17.3450, "lng": 78.5520, "capacity": 100, "currentLevel": 70, "area": "Dilsukhnagar" },
-    { "id": "BIN015", "lat": 17.4350, "lng": 78.4120, "capacity": 100, "currentLevel": 50, "area": "Moosapet" }
+    { "id": "BIN001", "lat": 17.3850, "lng": 78.4867, "capacity": 100, "currentLevel": 85, "area": "Hitech City", "isSmartBin": true },
+    { "id": "BIN002", "lat": 17.4156, "lng": 78.4347, "capacity": 100, "currentLevel": 45, "area": "Kukatpally", "isSmartBin": true },
+    { "id": "BIN003", "lat": 17.4399, "lng": 78.3489, "capacity": 120, "currentLevel": 92, "area": "Miyapur", "isSmartBin": true },
+    { "id": "BIN004", "lat": 17.4401, "lng": 78.5018, "capacity": 100, "currentLevel": 30, "area": "Secunderabad", "isSmartBin": true },
+    { "id": "BIN005", "lat": 17.3616, "lng": 78.4747, "capacity": 80, "currentLevel": 78, "area": "Banjara Hills", "isSmartBin": true },
+    { "id": "BIN006", "lat": 17.3950, "lng": 78.4750, "capacity": 100, "currentLevel": 65, "area": "Madhapur", "isSmartBin": true },
+    { "id": "BIN007", "lat": 17.4260, "lng": 78.4540, "capacity": 90, "currentLevel": 88, "area": "KPHB", "isSmartBin": true },
+    { "id": "BIN008", "lat": 17.3700, "lng": 78.5380, "capacity": 100, "currentLevel": 55, "area": "LB Nagar", "isSmartBin": true },
+    { "id": "BIN009", "lat": 17.4480, "lng": 78.3910, "capacity": 110, "currentLevel": 72, "area": "Chandanagar", "isSmartBin": true },
+    { "id": "BIN010", "lat": 17.3560, "lng": 78.4010, "capacity": 100, "currentLevel": 95, "area": "Tolichowki", "isSmartBin": true },
+    { "id": "BIN011", "lat": 17.4100, "lng": 78.5200, "capacity": 85, "currentLevel": 40, "area": "Uppal", "isSmartBin": true },
+    { "id": "BIN012", "lat": 17.3280, "lng": 78.4130, "capacity": 100, "currentLevel": 82, "area": "Attapur", "isSmartBin": true },
+    { "id": "BIN013", "lat": 17.4020, "lng": 78.3650, "capacity": 95, "currentLevel": 60, "area": "Kondapur", "isSmartBin": true },
+    { "id": "BIN014", "lat": 17.3450, "lng": 78.5520, "capacity": 100, "currentLevel": 70, "area": "Dilsukhnagar", "isSmartBin": true },
+    { "id": "BIN015", "lat": 17.4350, "lng": 78.4120, "capacity": 100, "currentLevel": 50, "area": "Moosapet", "isSmartBin": true }
   ],
   "compactStations": [
     { "id": "CS001", "lat": 17.4050, "lng": 78.4550, "capacity": 2000, "currentLevel": 800, "area": "Ameerpet" },
@@ -43,7 +43,7 @@
     { "id": "CS005", "lat": 17.3400, "lng": 78.4800, "capacity": 2200, "currentLevel": 1500, "area": "Mehdipatnam" }
   ],
   "dumpyards": [
-    { "id": "DY001", "lat": 17.5200, "lng": 78.3100, "capacity": 50000, "currentLevel": 25000, "name": "Jawaharnagar Dumpyard" },
-    { "id": "DY002", "lat": 17.2800, "lng": 78.5600, "capacity": 40000, "currentLevel": 18000, "name": "Shamshabad Facility" }
+    { "id": "DY001", "lat": 17.5271, "lng": 78.5874, "capacity": 50000, "currentLevel": 25000, "name": "Jawaharnagar Dumpyard" },
+    { "id": "DY002", "lat": 17.6080, "lng": 78.3880, "capacity": 40000, "currentLevel": 18000, "name": "Dundigal Waste Processing Plant" }
   ]
 }

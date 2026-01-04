@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Truck, User, AlertCircle, LogIn, MapPin } from 'lucide-react';
+import { Truck, User, AlertCircle, LogIn, MapPin, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,10 +9,44 @@ import { useData } from '@/context/DataContext';
 import { UserRole } from '@/types';
 import logoDark from '@/assets/logo-dark.jpg';
 import logoLight from '@/assets/logo-light.jpg';
+import { toast } from 'sonner';
+
+// Admin password hash stored in localStorage
+const ADMIN_PASSWORD_KEY = 'ajastra_admin_password_hash';
+const DEFAULT_PASSWORD = '12345';
+
+// Simple hash function for password
+function hashPassword(password: string): string {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(36);
+}
+
+// Initialize default password if not set
+function initializePassword() {
+  if (!localStorage.getItem(ADMIN_PASSWORD_KEY)) {
+    localStorage.setItem(ADMIN_PASSWORD_KEY, hashPassword(DEFAULT_PASSWORD));
+  }
+}
+
+export function validateAdminPassword(password: string): boolean {
+  initializePassword();
+  const storedHash = localStorage.getItem(ADMIN_PASSWORD_KEY);
+  return storedHash === hashPassword(password);
+}
+
+export function updateAdminPassword(newPassword: string): void {
+  localStorage.setItem(ADMIN_PASSWORD_KEY, hashPassword(newPassword));
+}
 
 export default function LoginPage() {
   const [role, setRole] = useState<UserRole | null>(null);
   const [vehicleId, setVehicleId] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
   const { data } = useData();
@@ -21,6 +55,7 @@ export default function LoginPage() {
   useEffect(() => {
     const saved = localStorage.getItem('theme');
     setIsDarkMode(saved ? saved === 'dark' : true);
+    initializePassword();
   }, []);
 
   const handleLogin = () => {
@@ -58,7 +93,19 @@ export default function LoginPage() {
 
       login('driver', vehicleId.trim().toUpperCase());
     } else {
+      // Admin login with password
+      if (!adminPassword.trim()) {
+        setError('Please enter the admin password');
+        return;
+      }
+
+      if (!validateAdminPassword(adminPassword)) {
+        setError('Invalid admin password');
+        return;
+      }
+
       login('admin');
+      toast.success('Logged in as Admin');
     }
   };
 
@@ -117,7 +164,7 @@ export default function LoginPage() {
             <Label className="text-muted-foreground text-sm">Select Your Role</Label>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => { setRole('admin'); setError(''); }}
+                onClick={() => { setRole('admin'); setError(''); setVehicleId(''); }}
                 className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
                   role === 'admin' 
                     ? 'border-primary bg-primary/10 text-primary' 
@@ -128,7 +175,7 @@ export default function LoginPage() {
                 <span className="font-medium">Admin</span>
               </button>
               <button
-                onClick={() => { setRole('driver'); setError(''); }}
+                onClick={() => { setRole('driver'); setError(''); setAdminPassword(''); }}
                 className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
                   role === 'driver' 
                     ? 'border-primary bg-primary/10 text-primary' 
@@ -140,6 +187,31 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+
+          {/* Admin Password Input */}
+          {role === 'admin' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6"
+            >
+              <Label htmlFor="adminPassword" className="text-muted-foreground text-sm mb-2 block">
+                Admin Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="adminPassword"
+                  type="password"
+                  placeholder="Enter admin password"
+                  value={adminPassword}
+                  onChange={(e) => { setAdminPassword(e.target.value); setError(''); }}
+                  className="bg-secondary/50 pl-10"
+                />
+              </div>
+            </motion.div>
+          )}
 
           {/* Vehicle ID Input (for drivers) */}
           {role === 'driver' && (

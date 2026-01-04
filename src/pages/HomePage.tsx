@@ -1,17 +1,36 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Building2, MapPin, Filter } from 'lucide-react';
+import { Trash2, Building2, MapPin, Filter, Route, ChevronDown } from 'lucide-react';
 import MapWrapper from '@/components/MapWrapper';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useData } from '@/context/DataContext';
+import { useAuth } from '@/context/AuthContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function HomePage() {
-  const { data } = useData();
+  const { data, routes } = useData();
+  const { user } = useAuth();
   const [showSmartBins, setShowSmartBins] = useState(true);
   const [showCompactStations, setShowCompactStations] = useState(true);
   const [showDumpyards, setShowDumpyards] = useState(true);
+
+  // Get driver's route if logged in as driver
+  const driverRoute = user?.role === 'driver' && user?.vehicleId
+    ? routes.find(r => r.vehicleId.toLowerCase() === user.vehicleId?.toLowerCase())
+    : null;
+
+  // Get assigned bin IDs for this driver
+  const assignedBinIds = driverRoute?.route
+    .filter(point => point.type === 'smartbin')
+    .map(point => point.id) || [];
 
   const stats = [
     { 
@@ -49,46 +68,77 @@ export default function HomePage() {
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Hyderabad Overview</h1>
-            <p className="text-muted-foreground text-sm">Real-time waste management map</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              {user?.role === 'driver' ? `Route for ${user.vehicleId}` : 'Hyderabad Overview'}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {user?.role === 'driver' 
+                ? (driverRoute ? `${assignedBinIds.length} bins assigned` : 'No route assigned yet')
+                : 'Real-time waste management map'}
+            </p>
           </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Filter className="w-4 h-4" />
-            <span className="text-sm">Filters</span>
-          </div>
+          {user?.role === 'admin' && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Filter className="w-4 h-4" />
+              <span className="text-sm">Filters</span>
+            </div>
+          )}
         </div>
         
-        {/* Filter Checkboxes */}
-        <div className="flex flex-wrap gap-4">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="flex items-center gap-3 p-3 rounded-xl glass"
-            >
-              <Checkbox 
-                id={stat.label} 
-                checked={stat.checked}
-                onCheckedChange={(checked) => stat.onCheck(checked as boolean)}
-                className="data-[state=checked]:bg-primary"
-              />
-              <Label 
-                htmlFor={stat.label} 
-                className="flex items-center gap-2 cursor-pointer"
+        {/* Filter Checkboxes - Only for admin */}
+        {user?.role === 'admin' && (
+          <div className="flex flex-wrap gap-4">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="flex items-center gap-3 p-3 rounded-xl glass"
               >
-                <div className={`p-1.5 rounded-lg ${stat.bgColor}`}>
-                  <stat.icon className={`w-4 h-4 ${stat.color}`} />
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-foreground">{stat.label}</span>
-                  <span className={`ml-2 text-sm font-bold ${stat.color}`}>{stat.value}</span>
-                </div>
-              </Label>
-            </motion.div>
-          ))}
-        </div>
+                <Checkbox 
+                  id={stat.label} 
+                  checked={stat.checked}
+                  onCheckedChange={(checked) => stat.onCheck(checked as boolean)}
+                  className="data-[state=checked]:bg-primary"
+                />
+                <Label 
+                  htmlFor={stat.label} 
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <div className={`p-1.5 rounded-lg ${stat.bgColor}`}>
+                    <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-foreground">{stat.label}</span>
+                    <span className={`ml-2 text-sm font-bold ${stat.color}`}>{stat.value}</span>
+                  </div>
+                </Label>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* Driver info card */}
+        {user?.role === 'driver' && driverRoute && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-4 p-3 rounded-xl glass"
+          >
+            <div className="p-2 rounded-lg bg-primary/20">
+              <Route className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">
+                Distance: {driverRoute.totalDistance} km
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Est. Time: {driverRoute.estimatedTime} min
+              </p>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Map Container */}
@@ -103,9 +153,10 @@ export default function HomePage() {
             onError={(e) => console.error('Map render error:', e)}
           >
             <MapWrapper 
-              showSmartBins={showSmartBins}
-              showCompactStations={showCompactStations}
-              showDumpyards={showDumpyards}
+              showSmartBins={user?.role === 'admin' ? showSmartBins : true}
+              showCompactStations={user?.role === 'admin' ? showCompactStations : true}
+              showDumpyards={user?.role === 'admin' ? showDumpyards : true}
+              driverVehicleId={user?.role === 'driver' ? user.vehicleId : undefined}
             />
           </ErrorBoundary>
         </motion.div>

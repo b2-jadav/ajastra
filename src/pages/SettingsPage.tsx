@@ -1,18 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, User, Palette, Bell, Shield, Info, Sun, Moon } from 'lucide-react';
+import { Settings, User, Palette, Bell, Shield, Info, Sun, Moon, Lock, Key } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import logoDark from '@/assets/logo-dark.jpg';
 import logoLight from '@/assets/logo-light.jpg';
+import { validateAdminPassword, updateAdminPassword } from './LoginPage';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
-    return saved ? saved === 'dark' : true; // Default to dark
+    return saved ? saved === 'dark' : true;
   });
+
+  // Password change state
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     const root = document.documentElement;
@@ -24,6 +43,37 @@ export default function SettingsPage() {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  const handlePasswordChange = () => {
+    setPasswordError('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Please fill all fields');
+      return;
+    }
+
+    if (!validateAdminPassword(currentPassword)) {
+      setPasswordError('Current password is incorrect');
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      setPasswordError('New password must be at least 4 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    updateAdminPassword(newPassword);
+    toast.success('Password updated successfully');
+    setIsPasswordDialogOpen(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
 
   return (
     <div className="h-full overflow-auto p-6 scrollbar-thin">
@@ -70,6 +120,88 @@ export default function SettingsPage() {
             )}
           </div>
         </motion.div>
+
+        {/* Security Section - Admin Only */}
+        {user?.role === 'admin' && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="glass rounded-xl p-6"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-destructive/20">
+                <Shield className="w-5 h-5 text-destructive" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Security</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-3">
+                  <Key className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-foreground">Change Password</p>
+                    <p className="text-sm text-muted-foreground">Update your admin password</p>
+                  </div>
+                </div>
+                <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Lock className="w-4 h-4 mr-2" />
+                      Change
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Change Admin Password</DialogTitle>
+                      <DialogDescription>
+                        Enter your current password and choose a new one.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <Label>Current Password</Label>
+                        <Input 
+                          type="password"
+                          placeholder="Enter current password"
+                          value={currentPassword}
+                          onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(''); }}
+                        />
+                      </div>
+                      <div>
+                        <Label>New Password</Label>
+                        <Input 
+                          type="password"
+                          placeholder="Enter new password"
+                          value={newPassword}
+                          onChange={(e) => { setNewPassword(e.target.value); setPasswordError(''); }}
+                        />
+                      </div>
+                      <div>
+                        <Label>Confirm New Password</Label>
+                        <Input 
+                          type="password"
+                          placeholder="Confirm new password"
+                          value={confirmPassword}
+                          onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
+                        />
+                      </div>
+                      
+                      {passwordError && (
+                        <p className="text-sm text-destructive">{passwordError}</p>
+                      )}
+                      
+                      <Button onClick={handlePasswordChange} className="w-full">
+                        Update Password
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Appearance Section */}
         <motion.div 
