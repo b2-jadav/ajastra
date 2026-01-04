@@ -43,10 +43,7 @@
     { "id": "CS005", "lat": 17.3400, "lng": 78.4800, "capacity": 2200, "currentLevel": 1500, "area": "Mehdipatnam" }
   ],
   "dumpyards": [
-    { "id": "DY001", "lat": 17.5200, "lng": 78.3100, "capacity": 50000, "currentLevel": 25000, "isPermanent": true, "name": "Jawaharnagar Dumpyard" },
-    { "id": "DY002", "lat": 17.2800, "lng": 78.5600, "capacity": 40000, "currentLevel": 18000, "name": "Shamshabad Facility" },
-    { "id": "DY003", "lat": 17.5500, "lng": 78.5800, "capacity": 45000, "currentLevel": 12000, "name": "Ghatkesar Dumpyard" },
-    { "id": "DY004", "lat": 17.2500, "lng": 78.3200, "capacity": 35000, "currentLevel": 8000, "name": "Chevella Facility" },
-    { "id": "DY005", "lat": 17.4800, "lng": 78.2500, "capacity": 42000, "currentLevel": 15000, "name": "Patancheru Dumpyard" }
+    { "id": "DY001", "lat": 17.5200, "lng": 78.3100, "capacity": 50000, "currentLevel": 25000, "name": "Jawaharnagar Dumpyard" },
+    { "id": "DY002", "lat": 17.2800, "lng": 78.5600, "capacity": 40000, "currentLevel": 18000, "name": "Shamshabad Facility" }
   ]
 }

@@ -243,11 +243,11 @@ export async function generateOptimizedRoutes({
   
   // Step 2: Generate SAT routes based on workload mode
   if (balancedWorkload) {
-    // BALANCED WORKLOAD: True round-robin distribution across ALL SATs
-    // This ensures every active SAT gets bins, distributing workload evenly
+    // BALANCED WORKLOAD: Distribute bins evenly across ALL available SATs
+    // Each SAT gets roughly equal number of bins, sorted by proximity to reduce fuel
     
-    // First, assign each bin to its nearest station
-    const binsWithStation = binsToCollect.map(bin => {
+    // Sort bins by fill level (priority) and group by nearest station
+    const binsWithInfo = binsToCollect.map(bin => {
       let nearestStation = stations[0];
       let nearestDist = Infinity;
       stations.forEach(station => {
@@ -260,40 +260,38 @@ export async function generateOptimizedRoutes({
       return { bin, station: nearestStation, distance: nearestDist };
     });
     
-    // Sort by fill level (high priority first) for collection urgency
-    binsWithStation.sort((a, b) => b.bin.currentLevel - a.bin.currentLevel);
-    
-    // TRUE ROUND-ROBIN: Assign bins one by one to each SAT in turn
-    const satAssignments = new Map<string, { bin: SmartBin, station: CompactStation }[]>();
-    activeSATs.forEach(sat => satAssignments.set(sat.id, []));
-    
-    binsWithStation.forEach((item, idx) => {
-      // Round-robin: bin 0 -> SAT 0, bin 1 -> SAT 1, ..., bin N -> SAT (N % numSATs)
-      const satIdx = idx % activeSATs.length;
-      const sat = activeSATs[satIdx];
-      satAssignments.get(sat.id)?.push({ bin: item.bin, station: item.station });
+    // Sort by fill level (descending) then by distance (ascending) for fuel efficiency
+    binsWithInfo.sort((a, b) => {
+      const levelDiff = b.bin.currentLevel - a.bin.currentLevel;
+      if (Math.abs(levelDiff) > 10) return levelDiff;
+      return a.distance - b.distance;
     });
     
-    console.log('Balanced workload assignments:');
-    activeSATs.forEach(sat => {
-      const assigned = satAssignments.get(sat.id) || [];
-      console.log(`  ${sat.id}: ${assigned.length} bins`);
+    // Calculate bins per SAT (distribute evenly)
+    const binsPerSAT = Math.ceil(binsToCollect.length / activeSATs.length);
+    
+    // Assign bins to SATs in round-robin fashion
+    const satBinAssignments = new Map<string, { bin: typeof binsWithInfo[0], station: CompactStation }[]>();
+    activeSATs.forEach(sat => satBinAssignments.set(sat.id, []));
+    
+    binsWithInfo.forEach((binInfo, idx) => {
+      const satIdx = Math.floor(idx / binsPerSAT) % activeSATs.length;
+      const sat = activeSATs[satIdx];
+      satBinAssignments.get(sat.id)?.push({ bin: binInfo, station: binInfo.station });
     });
     
-    // Generate routes for EACH SAT that has bins
-    for (let satIdx = 0; satIdx < activeSATs.length; satIdx++) {
-      const sat = activeSATs[satIdx];
-      const assignedItems = satAssignments.get(sat.id) || [];
+    // Generate routes for each SAT
+    for (const sat of activeSATs) {
+      const assignedBins = satBinAssignments.get(sat.id) || [];
+      if (assignedBins.length === 0) continue;
       
-      if (assignedItems.length === 0) continue;
-      
-      // Group this SAT's bins by station
+      // Group bins by their target station
       const binsByStation = new Map<string, SmartBin[]>();
-      assignedItems.forEach(({ bin, station }) => {
+      assignedBins.forEach(({ bin, station }) => {
         if (!binsByStation.has(station.id)) {
           binsByStation.set(station.id, []);
         }
-        binsByStation.get(station.id)?.push(bin);
+        binsByStation.get(station.id)?.push(bin.bin);
       });
       
       let currentSatTime = 0;
@@ -303,14 +301,14 @@ export async function generateOptimizedRoutes({
       for (const [stationId, stationBins] of binsByStation) {
         const station = stations.find(s => s.id === stationId)!;
         
-        // Sort by distance from station for fuel efficiency
+        // Sort bins by distance from station for fuel efficiency
         const sortedBins = [...stationBins].sort((a, b) => {
           const distA = haversineDistance(a.lat, a.lng, station.lat, station.lng);
           const distB = haversineDistance(b.lat, b.lng, station.lat, station.lng);
           return distA - distB;
         });
         
-        // Batch by vehicle capacity
+        // Group by capacity
         let currentLoad = 0;
         let currentBatch: SmartBin[] = [];
         
@@ -321,7 +319,6 @@ export async function generateOptimizedRoutes({
             currentBatch.push(bin);
             currentLoad += binWeight;
           } else {
-            // Flush current batch
             if (currentBatch.length > 0) {
               const route = await createSATRoute(sat, currentBatch, station, tripNumber, currentSatTime);
               routes.push(route);
@@ -769,65 +766,4 @@ export function parseExcelData(data: any[][]): Partial<ExcelData> {
   }
   
   return result;
-}
-
-// Optimized load balancing algorithm
-export function optimizeLoadBalancing(
-  vehicles: Vehicle[],
-  smartBins: SmartBin[]
-): Map<string, SmartBin[]> {
-  // Filter active vehicles and sort by capacity (ascending)
-  const activeVehicles = vehicles
-    .filter(v => v.status === 'active')
-    .sort((a, b) => a.capacity - b.capacity);
-
-  if (activeVehicles.length === 0) return new Map();
-
-  // Calculate target vehicle count (85% of available vehicles)
-  const targetVehicleCount = Math.max(
-    1,
-    Math.ceil(activeVehicles.length * 0.85)
-  );
-
-  // Sort bins by fill level (descending) - prioritize full bins
-  const sortedBins = [...smartBins].sort(
-    (a, b) => b.currentLevel - a.currentLevel
-  );
-
-  // Initialize route map
-  const routes = new Map<string, SmartBin[]>();
-  const vehicleLoads = new Map<string, number>();
-
-  // Assign empty arrays and track loads for selected vehicles
-  activeVehicles.slice(0, targetVehicleCount).forEach(vehicle => {
-    routes.set(vehicle.id, []);
-    vehicleLoads.set(vehicle.id, 0);
-  });
-
-  // Distribute bins using greedy algorithm (assign to vehicle with lowest current load)
-  sortedBins.forEach(bin => {
-    let minLoadVehicle: string | null = null;
-    let minLoad = Infinity;
-
-    routes.forEach((_, vehicleId) => {
-      const currentLoad = vehicleLoads.get(vehicleId) || 0;
-      if (currentLoad < minLoad) {
-        minLoad = currentLoad;
-        minLoadVehicle = vehicleId;
-      }
-    });
-
-    if (minLoadVehicle) {
-      routes.get(minLoadVehicle)?.push(bin);
-      const currentCapacity = activeVehicles.find(
-        v => v.id === minLoadVehicle
-      )?.capacity || 5000;
-      vehicleLoads.set(
-        minLoadVehicle,
-        (vehicleLoads.get(minLoadVehicle) || 0) + bin.capacity
-      );
-    }
-  });
-
-  return routes;
 }

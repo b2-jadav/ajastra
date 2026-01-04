@@ -1,17 +1,16 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Route, Play, Loader2, FileSpreadsheet, Upload, 
   Truck, Package, Clock, MapPin, AlertCircle, CheckCircle2,
-  Download, Scale, RefreshCw
+  Download, Scale
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useData } from '@/context/DataContext';
-import { useAuth } from '@/context/AuthContext';;
-import { useGlobalSearch } from '@/hooks/useGlobalSearch'
+import { useAuth } from '@/context/AuthContext';
 import { generateOptimizedRoutes, parseExcelData, parseMultiSheetExcel } from '@/utils/routeOptimizer';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -21,31 +20,7 @@ export default function RoutesPage() {
   const { data, routes, setRoutes, isGeneratingRoutes, setIsGeneratingRoutes, updateData } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
-  const [balancedWorkload, setBalancedWorkload] = useState(false);;
-  const { search } = useGlobalSearch();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
-
-  const handleVehicleSearch = (query: string) => {
-    setSearchQuery(query);
-    const result = search(query);
-    if (result?.type === 'vehicle') {
-      setSelectedVehicle(result.id);
-    }
-  }
-
-  // Filter routes for drivers - they only see their own vehicle's routes
-  const displayedRoutes = useMemo(() => {
-    if (user?.role === 'driver' && user.vehicleId) {
-      return routes.filter(r => r.vehicleId === user.vehicleId);
-    }
-    return routes;
-  }, [routes, user]);
-
-  const handleClearRoutes = () => {
-    setRoutes([]);
-    toast.success('All routes have been cleared');
-  };
+  const [balancedWorkload, setBalancedWorkload] = useState(false);
 
   const handleGenerateRoutes = async () => {
     setIsGeneratingRoutes(true);
@@ -200,15 +175,15 @@ export default function RoutesPage() {
     toast.success('Sample template downloaded!');
   };
 
-  const totalDistance = displayedRoutes.reduce((sum, r) => sum + r.totalDistance, 0);
-  const totalTime = displayedRoutes.reduce((sum, r) => sum + r.estimatedTime, 0);
-  const satRoutes = displayedRoutes.filter(r => r.vehicleType === 'sat');
-  const truckRoutes = displayedRoutes.filter(r => r.vehicleType === 'truck');
+  const totalDistance = routes.reduce((sum, r) => sum + r.totalDistance, 0);
+  const totalTime = routes.reduce((sum, r) => sum + r.estimatedTime, 0);
+  const satRoutes = routes.filter(r => r.vehicleType === 'sat');
+  const truckRoutes = routes.filter(r => r.vehicleType === 'truck');
 
   return (
-    <div className="h-full overflow-auto p-2 sm:p-4 md:p-6 scrollbar-thin scrollbar-thin">
+    <div className="h-full overflow-auto p-6 scrollbar-thin">
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">Route Optimization</h1>
+        <h1 className="text-2xl font-bold text-foreground">Route Optimization</h1>
         <p className="text-muted-foreground">AI-powered route generation for waste collection</p>
       </div>
 
@@ -227,7 +202,7 @@ export default function RoutesPage() {
               <h2 className="text-lg font-semibold text-foreground">Generate Optimized Routes</h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
               {/* Route Generation */}
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
@@ -291,18 +266,6 @@ export default function RoutesPage() {
                     </>
                   )}
                 </Button>
-                
-                {routes.length > 0 && (
-                  <Button 
-                    onClick={handleClearRoutes}
-                    variant="outline"
-                    size="lg"
-                    className="w-full mt-2 text-destructive hover:bg-destructive/10"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Clear All Routes
-                  </Button>
-                )}
               </div>
 
               {/* Excel Upload */}
@@ -357,7 +320,7 @@ export default function RoutesPage() {
         )}
 
         {/* Route Statistics */}
-        {displayedRoutes.length > 0 && (
+        {routes.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -367,9 +330,9 @@ export default function RoutesPage() {
             <div className="glass rounded-xl p-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <Route className="w-4 h-4" />
-                <span className="text-sm">{user?.role === 'driver' ? 'Your Routes' : 'Total Routes'}</span>
+                <span className="text-sm">Total Routes</span>
               </div>
-              <p className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">{displayedRoutes.length}</p>
+              <p className="text-2xl font-bold text-foreground">{routes.length}</p>
             </div>
             
             <div className="glass rounded-xl p-4">
@@ -377,7 +340,7 @@ export default function RoutesPage() {
                 <MapPin className="w-4 h-4" />
                 <span className="text-sm">Total Distance</span>
               </div>
-              <p className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">{totalDistance.toFixed(1)} km</p>
+              <p className="text-2xl font-bold text-foreground">{totalDistance.toFixed(1)} km</p>
             </div>
             
             <div className="glass rounded-xl p-4">
@@ -385,7 +348,7 @@ export default function RoutesPage() {
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">Est. Time</span>
               </div>
-              <p className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">{Math.round(totalTime)} min</p>
+              <p className="text-2xl font-bold text-foreground">{Math.round(totalTime)} min</p>
             </div>
             
             <div className="glass rounded-xl p-4">
@@ -393,7 +356,7 @@ export default function RoutesPage() {
                 <Truck className="w-4 h-4" />
                 <span className="text-sm">Vehicles</span>
               </div>
-              <p className="text-xl sm:text-2xl md:text-2xl font-bold text-foreground">
+              <p className="text-2xl font-bold text-foreground">
                 {satRoutes.length} SAT, {truckRoutes.length} Truck
               </p>
             </div>
@@ -401,19 +364,17 @@ export default function RoutesPage() {
         )}
 
         {/* Route List */}
-        {displayedRoutes.length > 0 && (
+        {routes.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="glass rounded-xl p-6"
           >
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              {user?.role === 'driver' ? `Routes for ${user.vehicleId}` : 'Generated Routes'}
-            </h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Generated Routes</h2>
             
             <div className="space-y-3 max-h-96 overflow-auto scrollbar-thin">
-              {displayedRoutes.map((route, index) => (
+              {routes.map((route, index) => (
                 <div key={`${route.vehicleId}-${index}`} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-4">
                     <div className={`p-2 rounded-lg ${route.vehicleType === 'sat' ? 'bg-sat/20' : 'bg-truck/20'}`}>
@@ -441,18 +402,14 @@ export default function RoutesPage() {
         )}
 
         {/* Empty State */}
-        {displayedRoutes.length === 0 && !isGeneratingRoutes && (
+        {routes.length === 0 && !isGeneratingRoutes && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
             <Route className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">
-              {user?.role === 'driver' 
-                ? 'No routes assigned to your vehicle yet.'
-                : 'No routes generated yet.'}
-            </p>
+            <p className="text-muted-foreground">No routes generated yet.</p>
             <p className="text-sm text-muted-foreground/70">
               {user?.role === 'admin' 
                 ? 'Click the generate button above to create optimized routes.'

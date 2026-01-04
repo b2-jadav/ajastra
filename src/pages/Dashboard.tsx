@@ -27,15 +27,15 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background flex-col md:flex-row md:overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-      <motion.main
+      <motion.main 
         key={activeTab}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -20 }}
         transition={{ duration: 0.2 }}
-        className="flex-1 overflow-y-auto md:overflow-hidden w-full md:w-auto"
+        className="flex-1 overflow-hidden"
       >
         {renderContent()}
       </motion.main>

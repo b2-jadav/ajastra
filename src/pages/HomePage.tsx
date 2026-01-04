@@ -3,8 +3,7 @@ import { motion } from 'framer-motion';
 import { Trash2, Building2, MapPin, Filter } from 'lucide-react';
 import MapWrapper from '@/components/MapWrapper';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { useData } from '@/context/DataContext';;
-import { useAuth } from '@/context/AuthContext'
+import { useData } from '@/context/DataContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -13,50 +12,30 @@ export default function HomePage() {
   const [showSmartBins, setShowSmartBins] = useState(true);
   const [showCompactStations, setShowCompactStations] = useState(true);
   const [showDumpyards, setShowDumpyards] = useState(true);
-;
-  const { user } = useAuth();
 
-  // Filter routes for driver view
-  const visibleRoutes = user?.role === 'driver'
-    ? data.routes?.filter(r => r.vehicleId === user.vehicleId)
-    : data.routes;
-
-  // Filter vehicles for driver view
-  const visibleVehicles = user?.role === 'driver'
-    ? [...data.vehicles.trucks, ...data.vehicles.sats].filter(v => v.id === user.vehicleId)
-    : [...data.vehicles.trucks, ...data.vehicles.sats];
-
-  // Filter bins for driver view
-  const visibleBins = user?.role === 'driver'
-    ? data.smartBins.filter(bin =>
-        visibleRoutes?.some(route =>
-          route.stops?.some(stop => stop.id === bin.id)
-        )
-      )
-    : data.smartBins
   const stats = [
-    {
-      label: 'Smart Bins',
-      value: data.smartBins.length,
-      icon: Trash2,
+    { 
+      label: 'Smart Bins', 
+      value: data.smartBins.length, 
+      icon: Trash2, 
       color: 'text-smartbin',
       bgColor: 'bg-smartbin/10',
       checked: showSmartBins,
       onCheck: setShowSmartBins
     },
-    {
-      label: 'Compact Stations',
-      value: data.compactStations.length,
-      icon: Building2,
+    { 
+      label: 'Compact Stations', 
+      value: data.compactStations.length, 
+      icon: Building2, 
       color: 'text-compact-station',
       bgColor: 'bg-compact-station/10',
       checked: showCompactStations,
       onCheck: setShowCompactStations
     },
-    {
-      label: 'Dumpyards',
-      value: data.dumpyards.length,
-      icon: MapPin,
+    { 
+      label: 'Dumpyards', 
+      value: data.dumpyards.length, 
+      icon: MapPin, 
       color: 'text-dumpyard',
       bgColor: 'bg-dumpyard/10',
       checked: showDumpyards,
@@ -65,64 +44,72 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="w-full h-full flex flex-col bg-background p-2 sm:p-4 md:p-6 overflow-hidden">
+    <div className="h-full flex flex-col">
       {/* Header with filters */}
-      <motion.div
-        className="space-y-2 sm:space-y-4 mb-2 sm:mb-4"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
-            Hyderabad Overview
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Real-time waste management map
-          </p>
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Hyderabad Overview</h1>
+            <p className="text-muted-foreground text-sm">Real-time waste management map</p>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Filter className="w-4 h-4" />
+            <span className="text-sm">Filters</span>
+          </div>
         </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-          <Filter className="w-4 sm:w-5 h-4 sm:h-5 text-muted-foreground" />
-          <span className="text-xs sm:text-sm font-medium text-muted-foreground">Filters</span>
-        </div>
-
+        
         {/* Filter Checkboxes */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+        <div className="flex flex-wrap gap-4">
           {stats.map((stat, index) => (
             <motion.div
-              key={index}
-              className="flex items-center gap-2 p-2 sm:p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              key={stat.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
+              className="flex items-center gap-3 p-3 rounded-xl glass"
             >
-              <Checkbox
-                id={`stat-${index}`}
+              <Checkbox 
+                id={stat.label} 
                 checked={stat.checked}
                 onCheckedChange={(checked) => stat.onCheck(checked as boolean)}
                 className="data-[state=checked]:bg-primary"
               />
-              <Label htmlFor={`stat-${index}`} className="flex-1 cursor-pointer text-xs sm:text-sm">
-                <span className="font-medium">{stat.label}</span>
-                <span className="ml-1 text-muted-foreground">({stat.value})</span>
+              <Label 
+                htmlFor={stat.label} 
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <div className={`p-1.5 rounded-lg ${stat.bgColor}`}>
+                  <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-foreground">{stat.label}</span>
+                  <span className={`ml-2 text-sm font-bold ${stat.color}`}>{stat.value}</span>
+                </div>
               </Label>
             </motion.div>
           ))}
         </div>
-      </motion.div>
+      </div>
 
       {/* Map Container */}
-      <motion.div
-        className="flex-1 rounded-lg overflow-hidden border border-border"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <ErrorBoundary fallback={<div>Error loading map</div>} onError={(e) => console.error('Map render error:', e)}>
-          <MapWrapper showSmartBins={showSmartBins} showCompactStations={showCompactStations} showDumpyards={showDumpyards} />
-        </ErrorBoundary>
-      </motion.div>
+      <div className="flex-1 p-4">
+        <motion.div 
+          className="h-full rounded-xl overflow-hidden border border-border shadow-xl"
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <ErrorBoundary
+            onError={(e) => console.error('Map render error:', e)}
+          >
+            <MapWrapper 
+              showSmartBins={showSmartBins}
+              showCompactStations={showCompactStations}
+              showDumpyards={showDumpyards}
+            />
+          </ErrorBoundary>
+        </motion.div>
+      </div>
     </div>
   );
 }

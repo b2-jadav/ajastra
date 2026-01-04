@@ -1,245 +1,203 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Truck, User, AlertCircle, Eye, EyeOff, LogOut, MapPin } from 'lucide-react';
+import { Truck, User, AlertCircle, LogIn, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
+import { UserRole } from '@/types';
 import logoDark from '@/assets/logo-dark.jpg';
 import logoLight from '@/assets/logo-light.jpg';
 
 export default function LoginPage() {
-  const [loginType, setLoginType] = useState<'admin' | 'driver'>('admin');
-  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole | null>(null);
   const [vehicleId, setVehicleId] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
-  
   const { login } = useAuth();
   const { data } = useData();
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem('theme');
     setIsDarkMode(saved ? saved === 'dark' : true);
   }, []);
 
-  // Get available vehicle IDs for driver login
-  const availableVehicles = [
-    ...(data?.vehicles?.trucks || []),
-    ...(data?.vehicles?.sats || [])
-  ].map(v => v.id);
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = () => {
     setError('');
-    setIsLoading(true);
-
-    try {
-      const success = await login('admin', undefined, password);
-      if (!success) {
-        setError('Invalid admin password');
-      }
-    } catch (err) {
-      setError('Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
+    
+    if (!role) {
+      setError('Please select your role');
+      return;
     }
-  };
 
-  const handleDriverLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
-    try {
-      if (!vehicleId) {
-        setError('Please select a vehicle');
-        setIsLoading(false);
+    if (role === 'driver') {
+      if (!vehicleId.trim()) {
+        setError('Please enter your vehicle ID');
         return;
       }
-      
-      const success = await login('driver', vehicleId);
-      if (!success) {
-        setError('Login failed. Please try again.');
+
+      const allVehicles = [
+        ...data.vehicles.trucks.map(t => ({ ...t, type: 'truck' })),
+        ...data.vehicles.sats.map(s => ({ ...s, type: 'sat' }))
+      ];
+
+      const vehicle = allVehicles.find(v => 
+        v.id.toLowerCase() === vehicleId.trim().toLowerCase()
+      );
+
+      if (!vehicle) {
+        setError('Vehicle ID not found. Please check and try again.');
+        return;
       }
-    } catch (err) {
-      setError('Login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
+
+      if (vehicle.status === 'off-duty') {
+        setError('This vehicle is currently marked as off-duty.');
+        return;
+      }
+
+      login('driver', vehicleId.trim().toUpperCase());
+    } else {
+      login('admin');
     }
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center transition-colors ${
-      isDarkMode ? 'bg-gray-900' : 'bg-gray-50'
-    }`}>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_hsl(187_85%_53%_/_0.1),_transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_hsl(217_91%_60%_/_0.1),_transparent_50%)]" />
+      
+      {/* Grid Pattern */}
+      <div 
+        className="absolute inset-0 opacity-5"
+        style={{
+          backgroundImage: 'linear-gradient(hsl(187 85% 53% / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(187 85% 53% / 0.3) 1px, transparent 1px)',
+          backgroundSize: '50px 50px'
+        }}
+      />
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`w-full max-w-md p-8 rounded-lg shadow-xl ${
-          isDarkMode ? 'bg-gray-800' : 'bg-white'
-        }`}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
       >
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <img
-            src={isDarkMode ? logoDark : logoLight}
-            alt="AJΔSTRA"
-            className="h-12 w-auto mx-auto mb-4"
-          />
-          <h1 className="text-3xl font-bold text-cyan-400 mb-2">AJΔSTRA</h1>
-          <p className={`text-sm ${
-            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-          }`}>
-            AI-powered Route Optimization
-          </p>
-        </div>
+        {/* Logo Section */}
+        <motion.div 
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-background/50 border border-primary/20 mb-4 overflow-hidden">
+            <img 
+              src={isDarkMode ? logoDark : logoLight} 
+              alt="AJΔSTRA Logo" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <h1 className="text-3xl font-bold gradient-text mb-2">AJΔSTRA</h1>
+          <p className="text-muted-foreground text-sm">AI System for Smart Transport Routing Analytics</p>
+        </motion.div>
 
-        {/* Login Type Selector */}
-        <div className="flex gap-3 mb-6">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setLoginType('admin');
-              setError('');
-            }}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-              loginType === 'admin'
-                ? 'bg-cyan-500 text-white'
-                : isDarkMode
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            <User size={18} />
-            Admin
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setLoginType('driver');
-              setError('');
-            }}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-              loginType === 'driver'
-                ? 'bg-cyan-500 text-white'
-                : isDarkMode
-                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            <Truck size={18} />
-            Driver
-          </motion.button>
-        </div>
+        {/* Login Card */}
+        <motion.div 
+          className="glass rounded-2xl p-8 shadow-2xl"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h2 className="text-xl font-semibold text-foreground mb-6 text-center">
+            Sign In to Continue
+          </h2>
 
-        {/* Error Message */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
-              isDarkMode
-                ? 'bg-red-900/30 border border-red-700 text-red-300'
-                : 'bg-red-50 border border-red-200 text-red-700'
-            }`}
-          >
-            <AlertCircle size={18} />
-            {error}
-          </motion.div>
-        )}
-
-        {/* Admin Login Form */}
-        {loginType === 'admin' && (
-          <form onSubmit={handleAdminLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="password" className={isDarkMode ? 'text-gray-300' : ''}>
-                Admin Password
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password"
-                  className={`${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''} pr-10`}
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              <p className={`text-xs mt-2 ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-500'
-              }`}>
-                Default password: 12345
-              </p>
-            </div>
-            <Button
-              type="submit"
-              disabled={isLoading || !password}
-              className="w-full bg-cyan-500 hover:bg-cyan-600"
-            >
-              {isLoading ? 'Signing in...' : 'Sign in as Admin'}
-            </Button>
-          </form>
-        )}
-
-        {/* Driver Login Form */}
-        {loginType === 'driver' && (
-          <form onSubmit={handleDriverLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="vehicle" className={isDarkMode ? 'text-gray-300' : ''}>
-                Select Your Vehicle
-              </Label>
-              <select
-                id="vehicle"
-                value={vehicleId}
-                onChange={(e) => setVehicleId(e.target.value)}
-                className={`w-full px-4 py-2 rounded-lg border transition-colors ${
-                  isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-white focus:border-cyan-500'
-                    : 'bg-white border-gray-300 text-black focus:border-cyan-500'
-                } focus:outline-none`}
-                disabled={isLoading}
+          {/* Role Selection */}
+          <div className="space-y-3 mb-6">
+            <Label className="text-muted-foreground text-sm">Select Your Role</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => { setRole('admin'); setError(''); }}
+                className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                  role === 'admin' 
+                    ? 'border-primary bg-primary/10 text-primary' 
+                    : 'border-border bg-secondary/50 text-muted-foreground hover:border-primary/50'
+                }`}
               >
-                <option value="">Choose a vehicle...</option>
-                {availableVehicles.map((id) => (
-                  <option key={id} value={id}>
-                    {id}
-                  </option>
-                ))}
-              </select>
+                <User className="w-6 h-6" />
+                <span className="font-medium">Admin</span>
+              </button>
+              <button
+                onClick={() => { setRole('driver'); setError(''); }}
+                className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                  role === 'driver' 
+                    ? 'border-primary bg-primary/10 text-primary' 
+                    : 'border-border bg-secondary/50 text-muted-foreground hover:border-primary/50'
+                }`}
+              >
+                <Truck className="w-6 h-6" />
+                <span className="font-medium">Driver</span>
+              </button>
             </div>
-            <Button
-              type="submit"
-              disabled={isLoading || !vehicleId}
-              className="w-full bg-cyan-500 hover:bg-cyan-600"
+          </div>
+
+          {/* Vehicle ID Input (for drivers) */}
+          {role === 'driver' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6"
             >
-              {isLoading ? 'Signing in...' : 'Sign in as Driver'}
-            </Button>
-          </form>
-        )}
+              <Label htmlFor="vehicleId" className="text-muted-foreground text-sm mb-2 block">
+                Vehicle ID
+              </Label>
+              <Input
+                id="vehicleId"
+                placeholder="e.g., T101 or SAT101"
+                value={vehicleId}
+                onChange={(e) => { setVehicleId(e.target.value); setError(''); }}
+                className="bg-secondary/50"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Enter your assigned vehicle ID (Truck: T101, SAT: SAT101)
+              </p>
+            </motion.div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 text-destructive bg-destructive/10 p-3 rounded-lg mb-6"
+            >
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{error}</span>
+            </motion.div>
+          )}
+
+          {/* Login Button */}
+          <Button 
+            onClick={handleLogin}
+            variant="glow"
+            size="xl"
+            className="w-full"
+          >
+            <LogIn className="w-5 h-5" />
+            Sign In
+          </Button>
+        </motion.div>
 
         {/* Footer */}
-        <div className={`mt-8 pt-4 border-t ${
-          isDarkMode ? 'border-gray-700' : 'border-gray-200'
-        } text-center text-sm ${
-          isDarkMode ? 'text-gray-400' : 'text-gray-500'
-        }`}>
-          <p>AJΔSTRA Smart Waste Collection System</p>
-          <p className="mt-1">© 2024 All Rights Reserved</p>
-        </div>
+        <motion.p 
+          className="text-center text-muted-foreground text-sm mt-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          Powered by AJΔSTRA
+        </motion.p>
       </motion.div>
     </div>
   );
