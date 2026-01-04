@@ -43,6 +43,7 @@ export interface Dumpyard {
   capacity: number;
   currentLevel: number;
   name: string;
+  permanent?: boolean; // Permanent dumpyards cannot be deleted except via modification tab
 }
 
 export interface User {

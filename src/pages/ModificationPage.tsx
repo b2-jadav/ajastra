@@ -65,8 +65,9 @@ export default function ModificationPage() {
   
   // Global search
   const [globalSearch, setGlobalSearch] = useState('');
+  const [activeTab, setActiveTab] = useState('vehicles');
 
-  // Search results
+  // Search results - exact match filtering
   const searchResults = useMemo(() => {
     if (!globalSearch.trim()) return null;
     
@@ -80,6 +81,36 @@ export default function ModificationPage() {
     
     return { bins, stations, dumpyards, trucks, sats };
   }, [globalSearch, data]);
+
+  // Handle clicking a search result to navigate and select
+  const handleSearchResultClick = (type: 'bin' | 'station' | 'dumpyard' | 'truck' | 'sat', id: string) => {
+    setGlobalSearch(''); // Clear search
+    
+    // Navigate to appropriate tab and select the item
+    if (type === 'bin') {
+      setActiveTab('bins');
+      setSelectionMode('bins');
+      setSelectedItems(new Set([id]));
+    } else if (type === 'station' || type === 'dumpyard') {
+      setActiveTab('facilities');
+      if (type === 'station') {
+        setSelectionMode('stations');
+      } else {
+        setSelectionMode('dumpyards');
+      }
+      setSelectedItems(new Set([id]));
+    } else if (type === 'truck' || type === 'sat') {
+      setActiveTab('vehicles');
+      if (type === 'truck') {
+        setSelectionMode('trucks');
+      } else {
+        setSelectionMode('sats');
+      }
+      setSelectedItems(new Set([id]));
+    }
+    
+    toast.success(`Selected ${id}`);
+  };
   
   const toggleSelection = (id: string) => {
     setSelectedItems(prev => {
@@ -309,41 +340,101 @@ export default function ModificationPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mt-3 p-4 rounded-xl glass"
           >
-            <h3 className="text-sm font-medium text-foreground mb-3">Search Results:</h3>
+            <h3 className="text-sm font-medium text-foreground mb-3">Search Results (click to select):</h3>
             <div className="grid gap-2 text-sm">
               {searchResults.bins.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Trash2 className="w-4 h-4 text-smartbin" />
-                  <span className="text-muted-foreground">Bins:</span>
-                  <span className="text-foreground">{searchResults.bins.map(b => b.id).join(', ')}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Trash2 className="w-4 h-4 text-smartbin" />
+                    <span>Bins:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 ml-6">
+                    {searchResults.bins.map(b => (
+                      <button 
+                        key={b.id}
+                        onClick={() => handleSearchResultClick('bin', b.id)}
+                        className="px-2 py-1 rounded bg-smartbin/20 text-smartbin text-xs hover:bg-smartbin/30 transition-colors cursor-pointer"
+                      >
+                        {b.id}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {searchResults.stations.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-compact-station" />
-                  <span className="text-muted-foreground">Stations:</span>
-                  <span className="text-foreground">{searchResults.stations.map(s => s.id).join(', ')}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Building2 className="w-4 h-4 text-compact-station" />
+                    <span>Stations:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 ml-6">
+                    {searchResults.stations.map(s => (
+                      <button 
+                        key={s.id}
+                        onClick={() => handleSearchResultClick('station', s.id)}
+                        className="px-2 py-1 rounded bg-compact-station/20 text-compact-station text-xs hover:bg-compact-station/30 transition-colors cursor-pointer"
+                      >
+                        {s.id}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {searchResults.dumpyards.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-dumpyard" />
-                  <span className="text-muted-foreground">Dumpyards:</span>
-                  <span className="text-foreground">{searchResults.dumpyards.map(d => `${d.id} (${d.name})`).join(', ')}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="w-4 h-4 text-dumpyard" />
+                    <span>Dumpyards:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 ml-6">
+                    {searchResults.dumpyards.map(d => (
+                      <button 
+                        key={d.id}
+                        onClick={() => handleSearchResultClick('dumpyard', d.id)}
+                        className="px-2 py-1 rounded bg-dumpyard/20 text-dumpyard text-xs hover:bg-dumpyard/30 transition-colors cursor-pointer"
+                      >
+                        {d.id}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {searchResults.trucks.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-truck" />
-                  <span className="text-muted-foreground">Trucks:</span>
-                  <span className="text-foreground">{searchResults.trucks.map(t => t.id).join(', ')}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Truck className="w-4 h-4 text-truck" />
+                    <span>Trucks:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 ml-6">
+                    {searchResults.trucks.map(t => (
+                      <button 
+                        key={t.id}
+                        onClick={() => handleSearchResultClick('truck', t.id)}
+                        className="px-2 py-1 rounded bg-truck/20 text-truck text-xs hover:bg-truck/30 transition-colors cursor-pointer"
+                      >
+                        {t.id}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {searchResults.sats.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-sat" />
-                  <span className="text-muted-foreground">SATs:</span>
-                  <span className="text-foreground">{searchResults.sats.map(s => s.id).join(', ')}</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Package className="w-4 h-4 text-sat" />
+                    <span>SATs:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 ml-6">
+                    {searchResults.sats.map(s => (
+                      <button 
+                        key={s.id}
+                        onClick={() => handleSearchResultClick('sat', s.id)}
+                        className="px-2 py-1 rounded bg-sat/20 text-sat text-xs hover:bg-sat/30 transition-colors cursor-pointer"
+                      >
+                        {s.id}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {searchResults.bins.length === 0 && searchResults.stations.length === 0 && 
@@ -356,10 +447,10 @@ export default function ModificationPage() {
         )}
       </div>
 
-      <Tabs defaultValue="vehicles" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-          <TabsTrigger value="bins">Smart Bins</TabsTrigger>
+          <TabsTrigger value="bins">Bins</TabsTrigger>
           <TabsTrigger value="facilities">Facilities</TabsTrigger>
         </TabsList>
 
@@ -689,8 +780,10 @@ export default function ModificationPage() {
                     <div className="min-w-[80px]">
                       <div className="flex items-center gap-1">
                         <span className="font-medium text-foreground">{bin.id}</span>
-                        {bin.isSmartBin && (
+                        {bin.isSmartBin ? (
                           <span className="px-1.5 py-0.5 rounded text-[10px] bg-smartbin/20 text-smartbin">SMART</span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-muted text-muted-foreground">GENERAL</span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">{bin.area}</p>

@@ -43,7 +43,7 @@
     { "id": "CS005", "lat": 17.3400, "lng": 78.4800, "capacity": 2200, "currentLevel": 1500, "area": "Mehdipatnam" }
   ],
   "dumpyards": [
-    { "id": "DY001", "lat": 17.5271, "lng": 78.5874, "capacity": 50000, "currentLevel": 25000, "name": "Jawaharnagar Dumpyard" },
-    { "id": "DY002", "lat": 17.6080, "lng": 78.3880, "capacity": 40000, "currentLevel": 18000, "name": "Dundigal Waste Processing Plant" }
+    { "id": "DY001", "lat": 17.5271, "lng": 78.5874, "capacity": 50000, "currentLevel": 25000, "name": "Jawaharnagar Dumpyard", "permanent": true },
+    { "id": "DY002", "lat": 17.6080, "lng": 78.3880, "capacity": 40000, "currentLevel": 18000, "name": "Dundigal Waste Processing Plant", "permanent": true }
   ]
 }
