@@ -16,8 +16,8 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 // Get OSRM route between points with retry and timeout
 async function getOSRMRoute(
   coordinates: [number, number][],
-  retries = 2,
-  timeout = 8000
+  retries = 3,
+  timeout = 15000
 ): Promise<{ coords: [number, number][]; distance: number; duration: number } | null> {
   if (coordinates.length < 2) return null;
   
@@ -35,12 +35,23 @@ async function getOSRMRoute(
       
       clearTimeout(timeoutId);
       
-      if (!response.ok) {
+      // Handle rate limiting (429) with exponential backoff
+      if (response.status === 429) {
         if (attempt < retries) {
-          await new Promise(r => setTimeout(r, 500 * (attempt + 1))); // Backoff
+          const backoffTime = 2000 * Math.pow(2, attempt); // 2s, 4s, 8s
+          console.log(`OSRM rate limited, waiting ${backoffTime}ms before retry...`);
+          await new Promise(r => setTimeout(r, backoffTime));
           continue;
         }
-        return null;
+        throw new Error('OSRM rate limit exceeded');
+      }
+      
+      if (!response.ok) {
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        throw new Error('OSRM request failed');
       }
       
       const data = await response.json();
@@ -54,9 +65,10 @@ async function getOSRMRoute(
       }
     } catch (error) {
       if (attempt < retries) {
-        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
         continue;
       }
+      throw error;
     }
   }
   
@@ -514,19 +526,18 @@ export async function generateOptimizedRoutes({
 }
 
 // Progressively fetch OSRM routes and update coordinates
+// OSRM public API limit: 1 request per second max
 async function fetchOSRMRoutesProgressively(
   routes: OptimizedRoute[],
   onRouteUpdated?: (routes: OptimizedRoute[]) => void
 ) {
-  const BATCH_SIZE = 3; // Process 3 routes at a time
-  const DELAY_BETWEEN_BATCHES = 300; // 300ms between batches
+  const DELAY_BETWEEN_REQUESTS = 1100; // 1.1 seconds between requests (respecting 1/sec limit)
   
-  for (let i = 0; i < routes.length; i += BATCH_SIZE) {
-    const batch = routes.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < routes.length; i++) {
+    const route = routes[i];
+    if (route.osrmFetched) continue;
     
-    await Promise.all(batch.map(async (route) => {
-      if (route.osrmFetched) return;
-      
+    try {
       const osrmResult = await getOSRMRoute(route.coordinates);
       if (osrmResult) {
         route.coordinates = osrmResult.coords;
@@ -536,16 +547,19 @@ async function fetchOSRMRoutesProgressively(
       } else {
         route.osrmFetched = true; // Mark as attempted even if failed
       }
-    }));
+    } catch (error) {
+      console.warn(`OSRM routing failed for ${route.vehicleId}, using direct lines:`, error);
+      route.osrmFetched = true;
+    }
     
-    // Notify about updates
+    // Notify about updates after each route
     if (onRouteUpdated) {
       onRouteUpdated([...routes]);
     }
     
-    // Small delay between batches to avoid rate limiting
-    if (i + BATCH_SIZE < routes.length) {
-      await new Promise(r => setTimeout(r, DELAY_BETWEEN_BATCHES));
+    // Delay between requests to respect rate limit
+    if (i < routes.length - 1) {
+      await new Promise(r => setTimeout(r, DELAY_BETWEEN_REQUESTS));
     }
   }
 }
@@ -617,6 +631,8 @@ export function parseMultiSheetExcel(workbook: any): Partial<ExcelData> {
       const sheet = workbook.Sheets[sheetName];
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
       
+      console.log(`Parsing GVP sheet "${sheetName}" with ${data.length} rows`);
+      
       // Find header row
       let headerIdx = 0;
       for (let i = 0; i < Math.min(5, data.length); i++) {
@@ -627,48 +643,59 @@ export function parseMultiSheetExcel(workbook: any): Partial<ExcelData> {
         }
       }
       
-      // Parse data rows
+      // Parse data rows - be more lenient with row requirements
       for (let i = headerIdx + 1; i < data.length; i++) {
         const row = data[i];
-        if (!row || row.length < 4) continue;
+        if (!row || row.length < 3) continue; // Only need 3 columns minimum
         
         const sNo = row[0];
         const location = String(row[1] || '');
-        const col2Value = parseFloat(row[2]);
-        const col3Value = parseFloat(row[3]);
+        
+        // Try columns 2,3 first, then 3,4 if that fails
+        let col2Value = parseFloat(row[2]);
+        let col3Value = parseFloat(row[3]);
         const estimatedWaste = parseFloat(row[4]) || 1.0;
+        
+        // If col2 or col3 is NaN, try shifting columns
+        if (isNaN(col2Value) || isNaN(col3Value)) {
+          col2Value = parseFloat(row[3]);
+          col3Value = parseFloat(row[4]);
+        }
         
         if (isNaN(col2Value) || isNaN(col3Value)) continue;
         
         // Auto-detect which column is lat vs lng based on value ranges
-        // Latitude for India: 6-36, Longitude for India: 68-98
-        // If col2 is in latitude range and col3 is in longitude range, use col2 as lat
+        // Widened ranges for India: Lat 6-40, Long 65-100
         let lat: number, lng: number;
         
-        if (col2Value >= 6 && col2Value <= 36 && col3Value >= 68 && col3Value <= 98) {
-          // Col2 is latitude, Col3 is longitude (despite what headers may say)
+        if (col2Value >= 6 && col2Value <= 40 && col3Value >= 65 && col3Value <= 100) {
           lat = col2Value;
           lng = col3Value;
-        } else if (col3Value >= 6 && col3Value <= 36 && col2Value >= 68 && col2Value <= 98) {
-          // Col3 is latitude, Col2 is longitude
+        } else if (col3Value >= 6 && col3Value <= 40 && col2Value >= 65 && col2Value <= 100) {
           lat = col3Value;
           lng = col2Value;
         } else {
-          // Can't determine, skip this row
-          console.warn(`Skipping row ${i}: coordinates out of India range (${col2Value}, ${col3Value})`);
-          continue;
+          // Fallback: assume col2 is lat, col3 is lng if values are plausible
+          if (col2Value >= -90 && col2Value <= 90 && col3Value >= -180 && col3Value <= 180) {
+            lat = col2Value;
+            lng = col3Value;
+          } else {
+            continue;
+          }
         }
         
         result.bins?.push({
           id: `GVP-${sNo || i}`,
           lat: lat,
           lng: lng,
-          capacity: 100, // Default bin capacity in liters
-          currentLevel: Math.min(100, Math.round(estimatedWaste * 50)), // Convert waste estimate to fill %
+          capacity: 100,
+          currentLevel: Math.min(100, Math.round(estimatedWaste * 50)),
           area: location,
-          isSmartBin: true // Default to smart bin
+          isSmartBin: true
         });
       }
+      
+      console.log(`Parsed ${result.bins?.length} GVPs from sheet "${sheetName}"`);
       break;
     }
   }
