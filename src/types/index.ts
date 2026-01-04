@@ -69,6 +69,7 @@ export interface OptimizedRoute {
   tripNumber?: number; // for vehicles making multiple trips
   targetStationId?: string; // station this route serves (for SAT routes)
   coordinates: [number, number][];
+  osrmFetched?: boolean; // Flag to track if accurate OSRM route has been fetched
 }
 
 export interface Database {
