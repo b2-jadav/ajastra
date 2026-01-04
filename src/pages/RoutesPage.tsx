@@ -48,7 +48,7 @@ export default function RoutesPage() {
     setRoutes([]); // Clear existing routes
     
     try {
-      toast.info('Generating optimized routes...', { duration: 2000 });
+      toast.info('Generating routes (paths will refine progressively)...', { duration: 3000 });
       
       const optimizedRoutes = await generateOptimizedRoutes({
         bins: data.smartBins,
@@ -57,13 +57,17 @@ export default function RoutesPage() {
         sats: data.vehicles.sats,
         trucks: data.vehicles.trucks,
         onRouteGenerated: (route, allRoutes) => {
-          // Progressive update - show routes as they're generated
+          // Progressive update - show routes as they're generated (straight lines first)
           setRoutes([...allRoutes]);
+        },
+        onRouteUpdated: (updatedRoutes) => {
+          // Update routes when OSRM accurate paths are fetched
+          setRoutes([...updatedRoutes]);
         }
       });
       
       setRoutes(optimizedRoutes);
-      toast.success(`Generated ${optimizedRoutes.length} optimized routes!`);
+      toast.success(`Generated ${optimizedRoutes.length} routes! Paths are being refined...`);
     } catch (error) {
       console.error('Route generation failed:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate routes');

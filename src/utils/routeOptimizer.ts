@@ -13,29 +13,54 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Get OSRM route between points
-async function getOSRMRoute(coordinates: [number, number][]): Promise<[number, number][]> {
-  if (coordinates.length < 2) return coordinates;
+// Get OSRM route between points with retry and timeout
+async function getOSRMRoute(
+  coordinates: [number, number][],
+  retries = 2,
+  timeout = 8000
+): Promise<{ coords: [number, number][]; distance: number; duration: number } | null> {
+  if (coordinates.length < 2) return null;
   
   const coordString = coordinates.map(c => `${c[1]},${c[0]}`).join(';');
   
-  try {
-    const response = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`
-    );
-    
-    if (!response.ok) throw new Error('OSRM request failed');
-    
-    const data = await response.json();
-    
-    if (data.routes && data.routes[0]) {
-      return data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      const response = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`,
+        { signal: controller.signal }
+      );
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1))); // Backoff
+          continue;
+        }
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (data.routes && data.routes[0]) {
+        return {
+          coords: data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]),
+          distance: data.routes[0].distance / 1000, // Convert to km
+          duration: data.routes[0].duration / 60 // Convert to minutes
+        };
+      }
+    } catch (error) {
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
     }
-  } catch (error) {
-    console.warn('OSRM routing failed, using direct lines:', error);
   }
   
-  return coordinates;
+  return null;
 }
 
 // Nearest neighbor algorithm for route optimization
@@ -130,14 +155,14 @@ function assignStationsToDumpyards(
   return assignments;
 }
 
-// Helper function to create SAT route
-async function createSATRoute(
+// Helper function to create SAT route (uses straight lines, OSRM fetched later)
+function createSATRouteSync(
   sat: Vehicle,
   bins: SmartBin[],
   station: CompactStation,
   tripNumber: number,
   startTime: number
-): Promise<OptimizedRoute> {
+): OptimizedRoute {
   const optimizedBatch = nearestNeighborTSP(station, bins);
   
   const routeCoords: [number, number][] = [
@@ -145,8 +170,6 @@ async function createSATRoute(
     ...optimizedBatch.map(b => [b.lat, b.lng] as [number, number]),
     [station.lat, station.lng]
   ];
-  
-  const osrmRoute = await getOSRMRoute(routeCoords);
   
   let totalDist = 0;
   for (let i = 0; i < routeCoords.length - 1; i++) {
@@ -173,7 +196,8 @@ async function createSATRoute(
     startTime,
     tripNumber,
     targetStationId: station.id,
-    coordinates: osrmRoute
+    coordinates: routeCoords,
+    osrmFetched: false // Flag to track if OSRM route has been fetched
   };
 }
 
@@ -184,6 +208,7 @@ interface GenerateRoutesParams {
   sats: Vehicle[];
   trucks: Vehicle[];
   onRouteGenerated?: (route: OptimizedRoute, allRoutes: OptimizedRoute[]) => void;
+  onRouteUpdated?: (routes: OptimizedRoute[]) => void; // Called when OSRM paths are fetched
 }
 
 const MAX_STOPS_PER_SAT = 20;
@@ -195,7 +220,8 @@ export async function generateOptimizedRoutes({
   dumpyards,
   sats,
   trucks,
-  onRouteGenerated
+  onRouteGenerated,
+  onRouteUpdated
 }: GenerateRoutesParams): Promise<OptimizedRoute[]> {
   const routes: OptimizedRoute[] = [];
   
@@ -360,7 +386,8 @@ export async function generateOptimizedRoutes({
       startTime: 0,
       tripNumber: 1,
       targetStationId: station.id,
-      coordinates: routeCoords
+      coordinates: routeCoords,
+      osrmFetched: false
     };
     
     routes.push(route);
@@ -369,13 +396,6 @@ export async function generateOptimizedRoutes({
     if (onRouteGenerated) {
       onRouteGenerated(route, [...routes]);
     }
-    
-    // Fetch OSRM route in background (don't wait)
-    getOSRMRoute(routeCoords).then(osrmRoute => {
-      route.coordinates = osrmRoute;
-    }).catch(() => {
-      // Keep direct route if OSRM fails
-    });
   }
   
   // Generate Truck routes (stations -> dumpyards)
@@ -472,7 +492,8 @@ export async function generateOptimizedRoutes({
         totalDistance: Math.round(totalDist * 10) / 10,
         estimatedTime: tripTime,
         startTime: Math.max(...satTimes, 0), // Start after SATs complete
-        coordinates: routeCoords
+        coordinates: routeCoords,
+        osrmFetched: false
       };
       
       routes.push(route);
@@ -481,16 +502,52 @@ export async function generateOptimizedRoutes({
         onRouteGenerated(route, [...routes]);
       }
       
-      // Fetch OSRM route in background
-      getOSRMRoute(routeCoords).then(osrmRoute => {
-        route.coordinates = osrmRoute;
-      }).catch(() => {});
-      
       truckIndex++;
     }
   }
   
+  // Now progressively fetch OSRM routes for accurate paths
+  // Process in batches to avoid rate limiting
+  fetchOSRMRoutesProgressively(routes, onRouteUpdated);
+  
   return routes;
+}
+
+// Progressively fetch OSRM routes and update coordinates
+async function fetchOSRMRoutesProgressively(
+  routes: OptimizedRoute[],
+  onRouteUpdated?: (routes: OptimizedRoute[]) => void
+) {
+  const BATCH_SIZE = 3; // Process 3 routes at a time
+  const DELAY_BETWEEN_BATCHES = 300; // 300ms between batches
+  
+  for (let i = 0; i < routes.length; i += BATCH_SIZE) {
+    const batch = routes.slice(i, i + BATCH_SIZE);
+    
+    await Promise.all(batch.map(async (route) => {
+      if (route.osrmFetched) return;
+      
+      const osrmResult = await getOSRMRoute(route.coordinates);
+      if (osrmResult) {
+        route.coordinates = osrmResult.coords;
+        route.totalDistance = Math.round(osrmResult.distance * 10) / 10;
+        route.estimatedTime = Math.round(osrmResult.duration);
+        route.osrmFetched = true;
+      } else {
+        route.osrmFetched = true; // Mark as attempted even if failed
+      }
+    }));
+    
+    // Notify about updates
+    if (onRouteUpdated) {
+      onRouteUpdated([...routes]);
+    }
+    
+    // Small delay between batches to avoid rate limiting
+    if (i + BATCH_SIZE < routes.length) {
+      await new Promise(r => setTimeout(r, DELAY_BETWEEN_BATCHES));
+    }
+  }
 }
 
 // Calculate total estimated time: max SAT time + max Truck time
