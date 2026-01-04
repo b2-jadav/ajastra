@@ -5,6 +5,7 @@ interface MapWrapperProps {
   showSmartBins: boolean;
   showCompactStations: boolean;
   showDumpyards: boolean;
+  driverVehicleId?: string;
 }
 
 export default function MapWrapper(props: MapWrapperProps) {

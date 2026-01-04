@@ -15,26 +15,25 @@ interface MapProps {
   showSmartBins: boolean;
   showCompactStations: boolean;
   showDumpyards: boolean;
+  driverVehicleId?: string;
 }
 
-// Custom icon creators
-function createIcon(color: string, svgPath: string) {
+// Simpler, lighter circle markers instead of complex SVG icons
+function createCircleIcon(color: string, size: number = 12) {
   return L.divIcon({
-    html: `<div style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: ${color}20; border: 2px solid ${color}; border-radius: 10px; box-shadow: 0 4px 12px ${color}40, 0 0 0 2px rgba(0,0,0,0.3);">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" stroke="#000" stroke-width="0.5" width="20" height="20">${svgPath}</svg>
-    </div>`,
-    className: 'custom-marker',
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36]
+    html: `<div style="width: ${size}px; height: ${size}px; background: ${color}; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+    className: 'simple-marker',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2]
   });
 }
 
-const binIcon = createIcon('#22c55e', '<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>');
-const stationIcon = createIcon('#f59e0b', '<path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>');
-const dumpyardIcon = createIcon('#ef4444', '<path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>');
+const binIcon = createCircleIcon('#22c55e', 14);
+const stationIcon = createCircleIcon('#f59e0b', 16);
+const dumpyardIcon = createCircleIcon('#ef4444', 18);
 
-export default function HyderabadMap({ showSmartBins, showCompactStations, showDumpyards }: MapProps) {
+export default function HyderabadMap({ showSmartBins, showCompactStations, showDumpyards, driverVehicleId }: MapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
@@ -43,28 +42,44 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
   
   const { data, routes } = useData();
 
+  // Get driver's specific route
+  const driverRoute = driverVehicleId 
+    ? routes.find(r => r.vehicleId.toLowerCase() === driverVehicleId.toLowerCase())
+    : null;
+
+  // Get bin/station/dumpyard IDs that are in the driver's route
+  const driverBinIds = new Set(
+    driverRoute?.route.filter(p => p.type === 'smartbin').map(p => p.id) || []
+  );
+  const driverStationIds = new Set(
+    driverRoute?.route.filter(p => p.type === 'compact-station').map(p => p.id) || []
+  );
+  const driverDumpyardIds = new Set(
+    driverRoute?.route.filter(p => p.type === 'dumpyard').map(p => p.id) || []
+  );
+
   // Initialize map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     // India bounds (approximate)
     const indiaBounds: L.LatLngBoundsExpression = [
-      [6.5, 68.0],   // Southwest corner (southern tip, west border)
-      [35.5, 97.5]   // Northeast corner (northern tip, east border)
+      [6.5, 68.0],
+      [35.5, 97.5]
     ];
 
     const map = L.map(mapContainerRef.current, {
-      center: [17.385, 78.4867], // Hyderabad center
+      center: [17.385, 78.4867],
       zoom: 12,
       zoomControl: true,
       scrollWheelZoom: true,
       maxBounds: indiaBounds,
-      maxBoundsViscosity: 1.0, // Strict bounds - can't pan outside
-      minZoom: 5, // Minimum zoom to see most of India
+      maxBoundsViscosity: 1.0,
+      minZoom: 5,
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     markersRef.current = L.layerGroup().addTo(map);
@@ -72,7 +87,6 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
     mapRef.current = map;
     setIsMapReady(true);
 
-    // Resize handling
     const handleResize = () => map.invalidateSize();
     window.addEventListener('resize', handleResize);
     setTimeout(handleResize, 100);
@@ -92,24 +106,28 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
 
     markersRef.current.clearLayers();
 
+    // Filter bins based on driver view or admin view
+    const binsToShow = driverVehicleId
+      ? data.smartBins.filter(bin => driverBinIds.has(bin.id))
+      : data.smartBins;
+
+    const stationsToShow = driverVehicleId
+      ? data.compactStations.filter(s => driverStationIds.has(s.id))
+      : data.compactStations;
+
+    const dumpyardsToShow = driverVehicleId
+      ? data.dumpyards.filter(d => driverDumpyardIds.has(d.id))
+      : data.dumpyards;
+
     // Add smart bins
     if (showSmartBins) {
-      data.smartBins.forEach(bin => {
+      binsToShow.forEach(bin => {
         const marker = L.marker([bin.lat, bin.lng], { icon: binIcon });
         marker.bindPopup(`
-          <div style="min-width: 150px;">
+          <div style="min-width: 120px; font-size: 12px;">
             <strong>${bin.id}</strong>
-            <div style="color: #666; font-size: 12px;">${bin.area}</div>
-            <div style="margin-top: 8px;">
-              <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span>Fill Level:</span>
-                <span style="color: ${bin.currentLevel > 80 ? '#ef4444' : '#22c55e'}">${bin.currentLevel}%</span>
-              </div>
-              <div style="background: #e5e7eb; border-radius: 4px; height: 6px; margin-top: 4px;">
-                <div style="background: ${bin.currentLevel > 80 ? '#ef4444' : bin.currentLevel > 50 ? '#f59e0b' : '#22c55e'}; height: 100%; border-radius: 4px; width: ${bin.currentLevel}%;"></div>
-              </div>
-              <div style="font-size: 11px; color: #888; margin-top: 4px;">Capacity: ${bin.capacity}L</div>
-            </div>
+            <div style="color: #666;">${bin.area}</div>
+            <div style="margin-top: 4px;">Fill: ${bin.currentLevel}%</div>
           </div>
         `);
         markersRef.current?.addLayer(marker);
@@ -118,22 +136,13 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
 
     // Add compact stations
     if (showCompactStations) {
-      data.compactStations.forEach(station => {
-        const fillPercent = (station.currentLevel / station.capacity) * 100;
+      stationsToShow.forEach(station => {
         const marker = L.marker([station.lat, station.lng], { icon: stationIcon });
         marker.bindPopup(`
-          <div style="min-width: 150px;">
+          <div style="min-width: 120px; font-size: 12px;">
             <strong>${station.id}</strong>
-            <div style="color: #666; font-size: 12px;">${station.area}</div>
-            <div style="margin-top: 8px;">
-              <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span>Load:</span>
-                <span>${station.currentLevel}kg / ${station.capacity}kg</span>
-              </div>
-              <div style="background: #e5e7eb; border-radius: 4px; height: 6px; margin-top: 4px;">
-                <div style="background: #f59e0b; height: 100%; border-radius: 4px; width: ${fillPercent}%;"></div>
-              </div>
-            </div>
+            <div style="color: #666;">${station.area}</div>
+            <div style="margin-top: 4px;">${station.currentLevel}/${station.capacity}kg</div>
           </div>
         `);
         markersRef.current?.addLayer(marker);
@@ -142,53 +151,45 @@ export default function HyderabadMap({ showSmartBins, showCompactStations, showD
 
     // Add dumpyards
     if (showDumpyards) {
-      data.dumpyards.forEach(dumpyard => {
-        const fillPercent = (dumpyard.currentLevel / dumpyard.capacity) * 100;
+      dumpyardsToShow.forEach(dumpyard => {
         const marker = L.marker([dumpyard.lat, dumpyard.lng], { icon: dumpyardIcon });
         marker.bindPopup(`
-          <div style="min-width: 150px;">
+          <div style="min-width: 120px; font-size: 12px;">
             <strong>${dumpyard.name}</strong>
-            <div style="color: #666; font-size: 12px;">${dumpyard.id}</div>
-            <div style="margin-top: 8px;">
-              <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span>Capacity:</span>
-                <span>${dumpyard.currentLevel.toLocaleString()} / ${dumpyard.capacity.toLocaleString()} tons</span>
-              </div>
-              <div style="background: #e5e7eb; border-radius: 4px; height: 6px; margin-top: 4px;">
-                <div style="background: #ef4444; height: 100%; border-radius: 4px; width: ${fillPercent}%;"></div>
-              </div>
-            </div>
+            <div style="color: #666;">${dumpyard.id}</div>
           </div>
         `);
         markersRef.current?.addLayer(marker);
       });
     }
-  }, [isMapReady, showSmartBins, showCompactStations, showDumpyards, data]);
+  }, [isMapReady, showSmartBins, showCompactStations, showDumpyards, data, driverVehicleId, driverBinIds, driverStationIds, driverDumpyardIds]);
 
-  // Update routes
+  // Update routes - show only driver's route or all routes
   useEffect(() => {
     if (!isMapReady || !routesRef.current) return;
 
     routesRef.current.clearLayers();
+
+    const routesToShow = driverVehicleId && driverRoute ? [driverRoute] : routes;
 
     const routeColors = [
       '#22d3ee', '#f59e0b', '#a855f7', '#22c55e', '#ef4444',
       '#3b82f6', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6'
     ];
 
-    routes.forEach((route, index) => {
+    routesToShow.forEach((route, index) => {
       if (route.coordinates && route.coordinates.length > 1) {
         const polyline = L.polyline(route.coordinates, {
           color: routeColors[index % routeColors.length],
-          weight: 6,
-          opacity: 0.9,
+          weight: 5,
+          opacity: 0.85,
           lineCap: 'round',
           lineJoin: 'round'
         });
         routesRef.current?.addLayer(polyline);
       }
     });
-  }, [isMapReady, routes]);
+  }, [isMapReady, routes, driverVehicleId, driverRoute]);
 
   return (
     <div 

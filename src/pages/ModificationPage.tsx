@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, Trash2, Truck, Package, Building2, MapPin, 
   Edit2, AlertTriangle, CheckCircle, XCircle, Settings2,
-  CheckSquare, Square
+  CheckSquare, Square, Search, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { useData } from '@/context/DataContext';
 import { Vehicle, SmartBin, CompactStation, Dumpyard } from '@/types';
 import { toast } from 'sonner';
@@ -35,6 +36,9 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
+// Permanent dumpyard IDs that cannot be deleted
+const PERMANENT_DUMPYARD_IDS = ['DY001', 'DY002'];
+
 export default function ModificationPage() {
   const { 
     data, 
@@ -42,7 +46,8 @@ export default function ModificationPage() {
     addSAT, removeSAT, updateSATStatus,
     addSmartBin, removeSmartBin, updateBinLevel,
     addCompactStation, removeCompactStation, updateStationLevel,
-    addDumpyard, removeDumpyard, updateDumpyardLevel
+    addDumpyard, removeDumpyard, updateDumpyardLevel,
+    updateData
   } = useData();
 
   // Form states
@@ -56,6 +61,25 @@ export default function ModificationPage() {
   const [selectionMode, setSelectionMode] = useState<'none' | 'bins' | 'stations' | 'dumpyards' | 'trucks' | 'sats'>('none');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [bulkFillLevel, setBulkFillLevel] = useState(50);
+  const [bulkSmartBin, setBulkSmartBin] = useState(true);
+  
+  // Global search
+  const [globalSearch, setGlobalSearch] = useState('');
+
+  // Search results
+  const searchResults = useMemo(() => {
+    if (!globalSearch.trim()) return null;
+    
+    const query = globalSearch.toLowerCase();
+    
+    const bins = data.smartBins.filter(b => b.id.toLowerCase().includes(query));
+    const stations = data.compactStations.filter(s => s.id.toLowerCase().includes(query));
+    const dumpyards = data.dumpyards.filter(d => d.id.toLowerCase().includes(query) || d.name.toLowerCase().includes(query));
+    const trucks = data.vehicles.trucks.filter(t => t.id.toLowerCase().includes(query));
+    const sats = data.vehicles.sats.filter(s => s.id.toLowerCase().includes(query));
+    
+    return { bins, stations, dumpyards, trucks, sats };
+  }, [globalSearch, data]);
   
   const toggleSelection = (id: string) => {
     setSelectedItems(prev => {
@@ -79,7 +103,7 @@ export default function ModificationPage() {
         items = data.compactStations.map(s => s.id);
         break;
       case 'dumpyards':
-        items = data.dumpyards.map(d => d.id);
+        items = data.dumpyards.filter(d => !PERMANENT_DUMPYARD_IDS.includes(d.id)).map(d => d.id);
         break;
       case 'trucks':
         items = data.vehicles.trucks.map(t => t.id);
@@ -94,6 +118,23 @@ export default function ModificationPage() {
   const clearSelection = () => {
     setSelectionMode('none');
     setSelectedItems(new Set());
+  };
+
+  const toggleBulkSmartBin = () => {
+    if (selectedItems.size === 0) {
+      toast.error('No bins selected');
+      return;
+    }
+    
+    // Update selected bins to smart or regular based on bulkSmartBin toggle
+    updateData({
+      ...data,
+      smartBins: data.smartBins.map(bin => 
+        selectedItems.has(bin.id) ? { ...bin, isSmartBin: bulkSmartBin } : bin
+      )
+    });
+    
+    toast.success(`Updated ${selectedItems.size} bins to ${bulkSmartBin ? 'Smart' : 'Regular'}`);
   };
   
   const applyBulkAction = (action: 'delete' | 'setLevel') => {
@@ -112,7 +153,9 @@ export default function ModificationPage() {
             removeCompactStation(id);
             break;
           case 'dumpyards':
-            removeDumpyard(id);
+            if (!PERMANENT_DUMPYARD_IDS.includes(id)) {
+              removeDumpyard(id);
+            }
             break;
           case 'trucks':
             removeTruck(id);
@@ -231,11 +274,86 @@ export default function ModificationPage() {
     toast.success(`Dumpyard ${newDumpyard.name} added successfully`);
   };
 
+  const handleDeleteDumpyard = (id: string, name: string) => {
+    if (PERMANENT_DUMPYARD_IDS.includes(id)) {
+      toast.error(`${name} is a permanent dumpyard and cannot be deleted`);
+      return;
+    }
+    removeDumpyard(id);
+    toast.success(`Dumpyard ${name} removed`);
+  };
+
   return (
     <div className="h-full overflow-auto p-6 scrollbar-thin">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Asset Management</h1>
         <p className="text-muted-foreground">Add, remove, and manage all waste management assets</p>
+      </div>
+
+      {/* Global Search */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by ID (bins, stations, dumpyards, vehicles)..."
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        
+        {/* Search Results */}
+        {searchResults && globalSearch.trim() && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 p-4 rounded-xl glass"
+          >
+            <h3 className="text-sm font-medium text-foreground mb-3">Search Results:</h3>
+            <div className="grid gap-2 text-sm">
+              {searchResults.bins.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-smartbin" />
+                  <span className="text-muted-foreground">Bins:</span>
+                  <span className="text-foreground">{searchResults.bins.map(b => b.id).join(', ')}</span>
+                </div>
+              )}
+              {searchResults.stations.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-compact-station" />
+                  <span className="text-muted-foreground">Stations:</span>
+                  <span className="text-foreground">{searchResults.stations.map(s => s.id).join(', ')}</span>
+                </div>
+              )}
+              {searchResults.dumpyards.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-dumpyard" />
+                  <span className="text-muted-foreground">Dumpyards:</span>
+                  <span className="text-foreground">{searchResults.dumpyards.map(d => `${d.id} (${d.name})`).join(', ')}</span>
+                </div>
+              )}
+              {searchResults.trucks.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-truck" />
+                  <span className="text-muted-foreground">Trucks:</span>
+                  <span className="text-foreground">{searchResults.trucks.map(t => t.id).join(', ')}</span>
+                </div>
+              )}
+              {searchResults.sats.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-sat" />
+                  <span className="text-muted-foreground">SATs:</span>
+                  <span className="text-foreground">{searchResults.sats.map(s => s.id).join(', ')}</span>
+                </div>
+              )}
+              {searchResults.bins.length === 0 && searchResults.stations.length === 0 && 
+               searchResults.dumpyards.length === 0 && searchResults.trucks.length === 0 && 
+               searchResults.sats.length === 0 && (
+                <p className="text-muted-foreground">No results found</p>
+              )}
+            </div>
+          </motion.div>
+        )}
       </div>
 
       <Tabs defaultValue="vehicles" className="w-full">
@@ -452,11 +570,27 @@ export default function ModificationPage() {
                     <Button variant="outline" size="sm" onClick={() => selectAll('bins')}>
                       <CheckSquare className="w-4 h-4 mr-1" /> Select All
                     </Button>
-                    <Button variant="outline" size="sm" onClick={clearSelection}>
-                      Cancel
-                    </Button>
+                    
+                    {/* Smart Bin Toggle */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/50 border border-border">
+                      <Checkbox
+                        id="bulk-smart-bin"
+                        checked={bulkSmartBin}
+                        onCheckedChange={(checked) => setBulkSmartBin(checked as boolean)}
+                      />
+                      <Label htmlFor="bulk-smart-bin" className="text-xs cursor-pointer">
+                        Smart Bin
+                      </Label>
+                      <Button variant="ghost" size="sm" onClick={toggleBulkSmartBin} disabled={selectedItems.size === 0}>
+                        Apply
+                      </Button>
+                    </div>
+                    
                     <Button variant="destructive" size="sm" onClick={() => applyBulkAction('delete')} disabled={selectedItems.size === 0}>
                       <Trash2 className="w-4 h-4 mr-1" /> Delete ({selectedItems.size})
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={clearSelection}>
+                      Cancel
                     </Button>
                   </>
                 ) : (
@@ -802,7 +936,12 @@ export default function ModificationPage() {
                 <div key={dumpyard.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-4 flex-1">
                     <div className="min-w-[100px]">
-                      <span className="font-medium text-foreground">{dumpyard.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{dumpyard.name}</span>
+                        {PERMANENT_DUMPYARD_IDS.includes(dumpyard.id) && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary">PERMANENT</span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">{dumpyard.id}</p>
                     </div>
                     <div className="flex items-center gap-3 flex-1 max-w-[250px]">
@@ -821,12 +960,10 @@ export default function ModificationPage() {
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => {
-                      removeDumpyard(dumpyard.id);
-                      toast.success(`Dumpyard ${dumpyard.name} removed`);
-                    }}
+                    onClick={() => handleDeleteDumpyard(dumpyard.id, dumpyard.name)}
+                    disabled={PERMANENT_DUMPYARD_IDS.includes(dumpyard.id)}
                   >
-                    <Trash2 className="w-4 h-4 text-destructive" />
+                    <Trash2 className={`w-4 h-4 ${PERMANENT_DUMPYARD_IDS.includes(dumpyard.id) ? 'text-muted-foreground' : 'text-destructive'}`} />
                   </Button>
                 </div>
               ))}
