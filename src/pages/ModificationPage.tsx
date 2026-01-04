@@ -66,6 +66,9 @@ export default function ModificationPage() {
   // Global search
   const [globalSearch, setGlobalSearch] = useState('');
   const [activeTab, setActiveTab] = useState('vehicles');
+  
+  // Filter by ID after clicking search result (shows element with full modification options)
+  const [filterById, setFilterById] = useState<{ type: 'bin' | 'station' | 'dumpyard' | 'truck' | 'sat'; id: string } | null>(null);
 
   // Search results - exact match filtering only
   const searchResults = useMemo(() => {
@@ -85,35 +88,46 @@ export default function ModificationPage() {
     return { bins, stations, dumpyards, trucks, sats };
   }, [globalSearch, data]);
 
-  // Handle clicking a search result to navigate and select
+  // Handle clicking a search result - navigate to the element with full modification options
   const handleSearchResultClick = (type: 'bin' | 'station' | 'dumpyard' | 'truck' | 'sat', id: string) => {
     setGlobalSearch(''); // Clear search
+    setSelectionMode('none'); // Exit selection mode to show full element UI
+    setSelectedItems(new Set()); // Clear selections
     
-    // Navigate to appropriate tab and select the item
+    // Navigate to appropriate tab and filter to show only that element
     if (type === 'bin') {
       setActiveTab('bins');
-      setSelectionMode('bins');
-      setSelectedItems(new Set([id]));
     } else if (type === 'station' || type === 'dumpyard') {
       setActiveTab('facilities');
-      if (type === 'station') {
-        setSelectionMode('stations');
-      } else {
-        setSelectionMode('dumpyards');
-      }
-      setSelectedItems(new Set([id]));
     } else if (type === 'truck' || type === 'sat') {
       setActiveTab('vehicles');
-      if (type === 'truck') {
-        setSelectionMode('trucks');
-      } else {
-        setSelectionMode('sats');
-      }
-      setSelectedItems(new Set([id]));
     }
     
-    toast.success(`Selected ${id}`);
+    setFilterById({ type, id });
+    toast.success(`Showing ${id}`);
   };
+  
+  // Clear filter
+  const clearFilter = () => {
+    setFilterById(null);
+  };
+
+  // Filtered data based on filterById
+  const filteredTrucks = filterById?.type === 'truck' 
+    ? data.vehicles.trucks.filter(t => t.id === filterById.id) 
+    : data.vehicles.trucks;
+  const filteredSats = filterById?.type === 'sat' 
+    ? data.vehicles.sats.filter(s => s.id === filterById.id) 
+    : data.vehicles.sats;
+  const filteredBins = filterById?.type === 'bin' 
+    ? data.smartBins.filter(b => b.id === filterById.id) 
+    : data.smartBins;
+  const filteredStations = filterById?.type === 'station' 
+    ? data.compactStations.filter(s => s.id === filterById.id) 
+    : data.compactStations;
+  const filteredDumpyards = filterById?.type === 'dumpyard' 
+    ? data.dumpyards.filter(d => d.id === filterById.id) 
+    : data.dumpyards;
   
   const toggleSelection = (id: string) => {
     setSelectedItems(prev => {
@@ -450,7 +464,23 @@ export default function ModificationPage() {
         )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      {/* Filter indicator */}
+      {filterById && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between"
+        >
+          <span className="text-sm text-foreground">
+            Showing: <span className="font-medium">{filterById.id}</span>
+          </span>
+          <Button variant="ghost" size="sm" onClick={clearFilter}>
+            <XCircle className="w-4 h-4 mr-1" /> Show All
+          </Button>
+        </motion.div>
+      )}
+
+      <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); clearFilter(); }} className="w-full">
         <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
           <TabsTrigger value="bins">Bins</TabsTrigger>
@@ -507,7 +537,7 @@ export default function ModificationPage() {
               </Dialog>
             </div>
             <div className="grid gap-3">
-              {data.vehicles.trucks.map((truck) => (
+              {filteredTrucks.map((truck) => (
                 <div key={truck.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-foreground">{truck.id}</span>
@@ -599,7 +629,7 @@ export default function ModificationPage() {
               </Dialog>
             </div>
             <div className="grid gap-3 max-h-64 overflow-auto scrollbar-thin">
-              {data.vehicles.sats.map((sat) => (
+              {filteredSats.map((sat) => (
                 <div key={sat.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-foreground">{sat.id}</span>
@@ -771,7 +801,7 @@ export default function ModificationPage() {
               </div>
             </div>
             <div className="grid gap-3 max-h-[500px] overflow-auto scrollbar-thin">
-              {data.smartBins.map((bin) => (
+              {filteredBins.map((bin) => (
                 <div key={bin.id} className={`flex items-center justify-between p-3 rounded-lg bg-secondary/50 ${selectionMode === 'bins' && selectedItems.has(bin.id) ? 'ring-2 ring-primary' : ''}`}>
                   <div className="flex items-center gap-4 flex-1">
                     {selectionMode === 'bins' && (
@@ -912,7 +942,7 @@ export default function ModificationPage() {
               </Dialog>
             </div>
             <div className="grid gap-3">
-              {data.compactStations.map((station) => (
+              {filteredStations.map((station) => (
                 <div key={station.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-4 flex-1">
                     <div className="min-w-[80px]">
@@ -1028,7 +1058,7 @@ export default function ModificationPage() {
               </Dialog>
             </div>
             <div className="grid gap-3">
-              {data.dumpyards.map((dumpyard) => (
+              {filteredDumpyards.map((dumpyard) => (
                 <div key={dumpyard.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                   <div className="flex items-center gap-4 flex-1">
                     <div className="min-w-[100px]">

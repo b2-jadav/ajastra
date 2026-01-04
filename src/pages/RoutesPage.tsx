@@ -494,7 +494,11 @@ export default function RoutesPage() {
             
             <div className="space-y-3 max-h-96 overflow-auto scrollbar-thin">
               {filteredRoutes.map((route, index) => {
-                const binStops = route.route.filter(p => p.type === 'smartbin');
+                // SATs collect from bins, Trucks collect from stations
+                const stopCount = route.vehicleType === 'sat' 
+                  ? route.route.filter(p => p.type === 'smartbin').length
+                  : route.route.filter(p => p.type === 'compact-station').length;
+                const stopLabel = route.vehicleType === 'sat' ? 'bin stops' : 'station stops';
                 const isExpanded = expandedRoutes.has(route.vehicleId);
                 
                 return (
@@ -515,7 +519,7 @@ export default function RoutesPage() {
                           <div className="text-left">
                             <p className="font-medium text-foreground">{route.vehicleId}</p>
                             <p className="text-sm text-muted-foreground">
-                              {binStops.length} stops
+                              {stopCount} {stopLabel}
                             </p>
                           </div>
                         </div>
