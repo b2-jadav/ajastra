@@ -67,36 +67,20 @@ export default function ModificationPage() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [activeTab, setActiveTab] = useState('vehicles');
 
-  // Search results - exact match filtering
+  // Search results - exact match filtering only
   const searchResults = useMemo(() => {
     if (!globalSearch.trim()) return null;
     
     const query = globalSearch.toLowerCase().trim();
     
-    // Exact match: ID must equal query OR query must match complete ID (not partial)
-    const exactMatch = (id: string) => {
-      const idLower = id.toLowerCase();
-      return idLower === query || idLower === query;
-    };
+    // Strict exact match: ID must equal query exactly
+    const exactMatch = (id: string) => id.toLowerCase() === query;
     
-    // For partial matching, ensure the query matches as a complete segment
-    // e.g., "SAT-4T-1" should not match "SAT-4T-10"
-    const segmentMatch = (id: string) => {
-      const idLower = id.toLowerCase();
-      if (idLower === query) return true;
-      // Check if query matches the start and is followed by a non-alphanumeric or end
-      if (idLower.startsWith(query)) {
-        const nextChar = idLower[query.length];
-        return !nextChar || !/[a-z0-9]/i.test(nextChar);
-      }
-      return false;
-    };
-    
-    const bins = data.smartBins.filter(b => segmentMatch(b.id));
-    const stations = data.compactStations.filter(s => segmentMatch(s.id));
-    const dumpyards = data.dumpyards.filter(d => segmentMatch(d.id) || d.name.toLowerCase().includes(query));
-    const trucks = data.vehicles.trucks.filter(t => segmentMatch(t.id));
-    const sats = data.vehicles.sats.filter(s => segmentMatch(s.id));
+    const bins = data.smartBins.filter(b => exactMatch(b.id));
+    const stations = data.compactStations.filter(s => exactMatch(s.id));
+    const dumpyards = data.dumpyards.filter(d => exactMatch(d.id) || d.name.toLowerCase() === query);
+    const trucks = data.vehicles.trucks.filter(t => exactMatch(t.id));
+    const sats = data.vehicles.sats.filter(s => exactMatch(s.id));
     
     return { bins, stations, dumpyards, trucks, sats };
   }, [globalSearch, data]);

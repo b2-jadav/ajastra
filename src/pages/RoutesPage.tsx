@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useData } from '@/context/DataContext';
 import { useAuth } from '@/context/AuthContext';
-import { generateOptimizedRoutes, parseExcelData, parseMultiSheetExcel } from '@/utils/routeOptimizer';
+import { generateOptimizedRoutes, parseExcelData, parseMultiSheetExcel, calculateTotalTime } from '@/utils/routeOptimizer';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import {
@@ -45,6 +45,7 @@ export default function RoutesPage() {
 
   const handleGenerateRoutes = async () => {
     setIsGeneratingRoutes(true);
+    setRoutes([]); // Clear existing routes
     
     try {
       toast.info('Generating optimized routes...', { duration: 2000 });
@@ -54,7 +55,11 @@ export default function RoutesPage() {
         stations: data.compactStations,
         dumpyards: data.dumpyards,
         sats: data.vehicles.sats,
-        trucks: data.vehicles.trucks
+        trucks: data.vehicles.trucks,
+        onRouteGenerated: (route, allRoutes) => {
+          // Progressive update - show routes as they're generated
+          setRoutes([...allRoutes]);
+        }
       });
       
       setRoutes(optimizedRoutes);
@@ -193,23 +198,13 @@ export default function RoutesPage() {
     });
   };
 
-  // Filter routes by search query (admin only) - exact match
+  // Filter routes by search query (admin only) - strict exact match only
   const filteredRoutes = user?.role === 'admin' && searchQuery
-    ? routes.filter(r => {
-        const query = searchQuery.toLowerCase().trim();
-        const id = r.vehicleId.toLowerCase();
-        if (id === query) return true;
-        // Match complete segment only (SAT-4T-1 should not match SAT-4T-10)
-        if (id.startsWith(query)) {
-          const nextChar = id[query.length];
-          return !nextChar || !/[a-z0-9]/i.test(nextChar);
-        }
-        return false;
-      })
+    ? routes.filter(r => r.vehicleId.toLowerCase() === searchQuery.toLowerCase().trim())
     : routes;
 
   const totalDistance = routes.reduce((sum, r) => sum + r.totalDistance, 0);
-  const totalTime = routes.reduce((sum, r) => sum + r.estimatedTime, 0);
+  const timeCalc = calculateTotalTime(routes);
   const satRoutes = routes.filter(r => r.vehicleType === 'sat');
   const truckRoutes = routes.filter(r => r.vehicleType === 'truck');
 
@@ -459,7 +454,7 @@ export default function RoutesPage() {
                 <Clock className="w-4 h-4" />
                 <span className="text-sm">Est. Time</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{Math.round(totalTime)} min</p>
+              <p className="text-2xl font-bold text-foreground">{timeCalc.hours} hrs</p>
             </div>
             
             <div className="glass rounded-xl p-4">
