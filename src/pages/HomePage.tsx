@@ -65,13 +65,13 @@ export default function HomePage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header with filters */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-3 md:p-4 border-b border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 md:mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">
               {user?.role === 'driver' ? `Route for ${user.vehicleId}` : 'Hyderabad Overview'}
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-xs md:text-sm">
               {user?.role === 'driver' 
                 ? (driverRoute ? `${assignedBinIds.length} bins assigned` : 'No route assigned yet')
                 : 'Real-time waste management map'}
@@ -87,14 +87,14 @@ export default function HomePage() {
         
         {/* Filter Checkboxes - Only for admin */}
         {user?.role === 'admin' && (
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
             {stats.map((stat, index) => (
               <motion.div
                 key={stat.label}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center gap-3 p-3 rounded-xl glass"
+                className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl glass"
               >
                 <Checkbox 
                   id={stat.label} 
@@ -104,14 +104,14 @@ export default function HomePage() {
                 />
                 <Label 
                   htmlFor={stat.label} 
-                  className="flex items-center gap-2 cursor-pointer"
+                  className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
                 >
-                  <div className={`p-1.5 rounded-lg ${stat.bgColor}`}>
-                    <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                  <div className={`p-1 md:p-1.5 rounded-lg ${stat.bgColor} shrink-0`}>
+                    <stat.icon className={`w-3 h-3 md:w-4 md:h-4 ${stat.color}`} />
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-foreground">{stat.label}</span>
-                    <span className={`ml-2 text-sm font-bold ${stat.color}`}>{stat.value}</span>
+                  <div className="flex items-center gap-1 md:gap-2 min-w-0">
+                    <span className="text-xs md:text-sm font-medium text-foreground truncate">{stat.label}</span>
+                    <span className={`text-xs md:text-sm font-bold ${stat.color} shrink-0`}>{stat.value}</span>
                   </div>
                 </Label>
               </motion.div>
@@ -124,13 +124,13 @@ export default function HomePage() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-4 p-3 rounded-xl glass"
+            className="flex items-center gap-3 md:gap-4 p-2 md:p-3 rounded-xl glass"
           >
-            <div className="p-2 rounded-lg bg-primary/20">
-              <Route className="w-5 h-5 text-primary" />
+            <div className="p-1.5 md:p-2 rounded-lg bg-primary/20">
+              <Route className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-xs md:text-sm font-medium text-foreground">
                 Distance: {driverRoute.totalDistance} km
               </p>
               <p className="text-xs text-muted-foreground">
@@ -142,7 +142,7 @@ export default function HomePage() {
       </div>
 
       {/* Map Container */}
-      <div className="flex-1 p-4">
+      <div className="flex-1 p-2 md:p-4">
         <motion.div 
           className="h-full rounded-xl overflow-hidden border border-border shadow-xl"
           initial={{ opacity: 0, scale: 0.98 }}

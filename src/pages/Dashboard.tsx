@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import Sidebar from '@/components/Sidebar';
+import Sidebar, { MobileHeader } from '@/components/Sidebar';
 import HomePage from '@/pages/HomePage';
 import ModificationPage from '@/pages/ModificationPage';
 import RoutesPage from '@/pages/RoutesPage';
@@ -27,8 +27,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden">
+      {/* Mobile Header with Drawer */}
+      <MobileHeader activeTab={activeTab} onTabChange={setActiveTab} />
+      
+      {/* Desktop Sidebar */}
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      
       <motion.main 
         key={activeTab}
         initial={{ opacity: 0, x: 20 }}

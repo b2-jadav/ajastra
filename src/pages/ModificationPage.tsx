@@ -332,21 +332,21 @@ export default function ModificationPage() {
   };
 
   return (
-    <div className="h-full overflow-auto p-6 scrollbar-thin">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Asset Management</h1>
-        <p className="text-muted-foreground">Add, remove, and manage all waste management assets</p>
+    <div className="h-full overflow-auto p-4 md:p-6 scrollbar-thin">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Asset Management</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Add, remove, and manage all waste management assets</p>
       </div>
 
       {/* Global Search */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
+      <div className="mb-4 md:mb-6">
+        <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by ID (bins, stations, dumpyards, vehicles)..."
+            placeholder="Search by ID..."
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 text-sm"
           />
         </div>
         
@@ -481,34 +481,34 @@ export default function ModificationPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); clearFilter(); }} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-          <TabsTrigger value="bins">Bins</TabsTrigger>
-          <TabsTrigger value="facilities">Facilities</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 mb-4 md:mb-6">
+          <TabsTrigger value="vehicles" className="text-xs md:text-sm">Vehicles</TabsTrigger>
+          <TabsTrigger value="bins" className="text-xs md:text-sm">Bins</TabsTrigger>
+          <TabsTrigger value="facilities" className="text-xs md:text-sm">Facilities</TabsTrigger>
         </TabsList>
 
         {/* Vehicles Tab */}
-        <TabsContent value="vehicles" className="space-y-6">
+        <TabsContent value="vehicles" className="space-y-4 md:space-y-6">
           {/* Trucks Section */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-xl p-6"
+            className="glass rounded-xl p-4 md:p-6"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-truck/20">
-                  <Truck className="w-5 h-5 text-truck" />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-lg bg-truck/20">
+                  <Truck className="w-4 h-4 md:w-5 md:h-5 text-truck" />
                 </div>
-                <h2 className="text-lg font-semibold text-foreground">Trucks</h2>
+                <h2 className="text-base md:text-lg font-semibold text-foreground">Trucks</h2>
               </div>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="w-4 h-4 mr-1" /> Add Truck
+                  <Button variant="outline" size="sm" className="text-xs md:text-sm">
+                    <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1" /> Add Truck
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-[90vw] sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Add New Truck</DialogTitle>
                     <DialogDescription>Enter the details for the new truck.</DialogDescription>
@@ -536,12 +536,12 @@ export default function ModificationPage() {
                 </DialogContent>
               </Dialog>
             </div>
-            <div className="grid gap-3">
+            <div className="grid gap-2 md:gap-3">
               {filteredTrucks.map((truck) => (
-                <div key={truck.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium text-foreground">{truck.id}</span>
-                    <span className="text-sm text-muted-foreground">{truck.capacity}kg</span>
+                <div key={truck.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 md:p-3 rounded-lg bg-secondary/50">
+                  <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                    <span className="text-sm md:text-base font-medium text-foreground">{truck.id}</span>
+                    <span className="text-xs md:text-sm text-muted-foreground">{truck.capacity}kg</span>
                     <span className={`px-2 py-0.5 rounded-full text-xs ${
                       truck.status === 'active' ? 'bg-success/20 text-success' : 
                       truck.status === 'off-duty' ? 'bg-destructive/20 text-destructive' :
@@ -555,7 +555,7 @@ export default function ModificationPage() {
                       value={truck.status} 
                       onValueChange={(value) => updateTruckStatus(truck.id, value as Vehicle['status'])}
                     >
-                      <SelectTrigger className="w-[120px] h-8">
+                      <SelectTrigger className="w-[100px] md:w-[120px] h-8 text-xs md:text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -567,6 +567,7 @@ export default function ModificationPage() {
                     <Button 
                       variant="ghost" 
                       size="icon"
+                      className="h-8 w-8"
                       onClick={() => {
                         removeTruck(truck.id);
                         toast.success(`Truck ${truck.id} removed`);
