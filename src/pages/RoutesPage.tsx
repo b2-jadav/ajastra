@@ -218,42 +218,42 @@ export default function RoutesPage() {
   // Driver view
   if (user?.role === 'driver') {
     return (
-      <div className="h-full overflow-auto p-6 scrollbar-thin">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">My Route</h1>
-          <p className="text-muted-foreground">Vehicle: {user.vehicleId}</p>
+      <div className="h-full overflow-auto p-4 md:p-6 scrollbar-thin">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">My Route</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Vehicle: {user.vehicleId}</p>
         </div>
 
         {driverRoute ? (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Route Stats */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-2 md:grid-cols-3 gap-4"
+              className="grid grid-cols-3 gap-2 md:gap-4"
             >
-              <div className="glass rounded-xl p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <MapPin className="w-4 h-4" />
-                  <span className="text-sm">Distance</span>
+              <div className="glass rounded-xl p-3 md:p-4">
+                <div className="flex items-center gap-1 md:gap-2 text-muted-foreground mb-1 md:mb-2">
+                  <MapPin className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">Distance</span>
                 </div>
-                <p className="text-2xl font-bold text-foreground">{driverRoute.totalDistance} km</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">{driverRoute.totalDistance} km</p>
               </div>
               
-              <div className="glass rounded-xl p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm">Est. Time</span>
+              <div className="glass rounded-xl p-3 md:p-4">
+                <div className="flex items-center gap-1 md:gap-2 text-muted-foreground mb-1 md:mb-2">
+                  <Clock className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">Est. Time</span>
                 </div>
-                <p className="text-2xl font-bold text-foreground">{driverRoute.estimatedTime} min</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">{driverRoute.estimatedTime} min</p>
               </div>
               
-              <div className="glass rounded-xl p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Package className="w-4 h-4" />
-                  <span className="text-sm">{isTruckDriver ? 'Stations' : 'Stops'}</span>
+              <div className="glass rounded-xl p-3 md:p-4">
+                <div className="flex items-center gap-1 md:gap-2 text-muted-foreground mb-1 md:mb-2">
+                  <Package className="w-3 h-3 md:w-4 md:h-4" />
+                  <span className="text-xs md:text-sm">{isTruckDriver ? 'Stations' : 'Stops'}</span>
                 </div>
-                <p className="text-2xl font-bold text-foreground">{assignedStops.length}</p>
+                <p className="text-lg md:text-2xl font-bold text-foreground">{assignedStops.length}</p>
               </div>
             </motion.div>
 
@@ -262,9 +262,9 @@ export default function RoutesPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="glass rounded-xl p-6"
+              className="glass rounded-xl p-4 md:p-6"
             >
-              <h2 className="text-lg font-semibold text-foreground mb-4">
+              <h2 className="text-base md:text-lg font-semibold text-foreground mb-3 md:mb-4">
                 {isTruckDriver ? 'Assigned Stations' : 'Assigned Bins'}
               </h2>
               <div className="grid gap-2 max-h-64 overflow-auto scrollbar-thin">
@@ -272,14 +272,14 @@ export default function RoutesPage() {
                   const station = isTruckDriver ? data.compactStations.find(s => s.id === stopId) : null;
                   const bin = !isTruckDriver ? data.smartBins.find(b => b.id === stopId) : null;
                   return (
-                    <div key={stopId} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                      <span className="text-sm font-medium text-muted-foreground w-6">{index + 1}.</span>
-                      <span className="font-medium text-foreground">{stopId}</span>
+                    <div key={stopId} className="flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-secondary/50">
+                      <span className="text-xs md:text-sm font-medium text-muted-foreground w-5 md:w-6">{index + 1}.</span>
+                      <span className="text-sm md:text-base font-medium text-foreground truncate">{stopId}</span>
                       {bin && (
-                        <span className="text-sm text-muted-foreground">- {bin.area}</span>
+                        <span className="text-xs md:text-sm text-muted-foreground truncate">- {bin.area}</span>
                       )}
                       {station && (
-                        <span className="text-sm text-muted-foreground">- {station.area}</span>
+                        <span className="text-xs md:text-sm text-muted-foreground truncate">- {station.area}</span>
                       )}
                     </div>
                   );
@@ -293,9 +293,9 @@ export default function RoutesPage() {
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
-            <Route className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+            <Route className="w-12 h-12 md:w-16 md:h-16 mx-auto text-muted-foreground/30 mb-4" />
             <p className="text-muted-foreground">No route assigned yet.</p>
-            <p className="text-sm text-muted-foreground/70">
+            <p className="text-xs md:text-sm text-muted-foreground/70">
               Please wait for an admin to generate routes.
             </p>
           </motion.div>
@@ -306,68 +306,67 @@ export default function RoutesPage() {
 
   // Admin view
   return (
-    <div className="h-full overflow-auto p-6 scrollbar-thin">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Route Optimization</h1>
-        <p className="text-muted-foreground">AI-powered route generation for waste collection</p>
+    <div className="h-full overflow-auto p-4 md:p-6 scrollbar-thin">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Route Optimization</h1>
+        <p className="text-sm md:text-base text-muted-foreground">AI-powered route generation for waste collection</p>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4 md:gap-6">
         {/* Generate Routes Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-xl p-6"
+          className="glass rounded-xl p-4 md:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-primary/20">
-              <Route className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="p-1.5 md:p-2 rounded-lg bg-primary/20">
+              <Route className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Generate Optimized Routes</h2>
+            <h2 className="text-base md:text-lg font-semibold text-foreground">Generate Optimized Routes</h2>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
             {/* Route Generation */}
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="space-y-3 md:space-y-4">
+              <p className="text-xs md:text-sm text-muted-foreground">
                 The AI will optimize routes based on:
               </p>
-              <ul className="text-sm text-muted-foreground space-y-2 ml-4">
+              <ul className="text-xs md:text-sm text-muted-foreground space-y-1.5 md:space-y-2 ml-2 md:ml-4">
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  SATs collect from smart bins → compact stations
+                  <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4 text-success shrink-0" />
+                  <span>SATs collect from smart bins → compact stations</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  Trucks collect from compact stations → dumpyards
+                  <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4 text-success shrink-0" />
+                  <span>Trucks collect from compact stations → dumpyards</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  Vehicle capacity constraints & fuel optimization
+                  <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4 text-success shrink-0" />
+                  <span>Vehicle capacity constraints & fuel optimization</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  OSRM road network integration
+                  <CheckCircle2 className="w-3 h-3 md:w-4 md:h-4 text-success shrink-0" />
+                  <span>OSRM road network integration</span>
                 </li>
               </ul>
-              
               
               <Button 
                 onClick={handleGenerateRoutes}
                 disabled={isGeneratingRoutes}
                 variant="glow"
-                size="xl"
-                className="w-full mt-4"
+                size="lg"
+                className="w-full mt-3 md:mt-4"
               >
                 {isGeneratingRoutes ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Optimizing Routes...
+                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                    <span className="text-sm md:text-base">Optimizing Routes...</span>
                   </>
                 ) : (
                   <>
-                    <Play className="w-5 h-5" />
-                    Generate Routes
+                    <Play className="w-4 h-4 md:w-5 md:h-5" />
+                    <span className="text-sm md:text-base">Generate Routes</span>
                   </>
                 )}
               </Button>
@@ -379,7 +378,7 @@ export default function RoutesPage() {
                     toast.success('All routes cleared');
                   }}
                   variant="outline"
-                  size="lg"
+                  size="default"
                   className="w-full mt-2"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
@@ -389,12 +388,12 @@ export default function RoutesPage() {
             </div>
 
             {/* Excel Upload */}
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="space-y-3 md:space-y-4">
+              <p className="text-xs md:text-sm text-muted-foreground">
                 Upload Excel with sheets: "Sample Data" (GVPs), "Fleet Details", "SCTP" (stations)
               </p>
               
-              <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors">
+              <div className="border-2 border-dashed border-border rounded-xl p-4 md:p-6 text-center hover:border-primary/50 transition-colors">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -405,15 +404,15 @@ export default function RoutesPage() {
                 />
                 <label htmlFor="excel-upload" className="cursor-pointer">
                   {uploadStatus === 'uploading' ? (
-                    <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                    <Loader2 className="w-8 h-8 md:w-12 md:h-12 mx-auto text-primary animate-spin" />
                   ) : uploadStatus === 'success' ? (
-                    <CheckCircle2 className="w-12 h-12 mx-auto text-success" />
+                    <CheckCircle2 className="w-8 h-8 md:w-12 md:h-12 mx-auto text-success" />
                   ) : uploadStatus === 'error' ? (
-                    <AlertCircle className="w-12 h-12 mx-auto text-destructive" />
+                    <AlertCircle className="w-8 h-8 md:w-12 md:h-12 mx-auto text-destructive" />
                   ) : (
-                    <FileSpreadsheet className="w-12 h-12 mx-auto text-muted-foreground" />
+                    <FileSpreadsheet className="w-8 h-8 md:w-12 md:h-12 mx-auto text-muted-foreground" />
                   )}
-                  <p className="mt-2 text-sm text-foreground font-medium">
+                  <p className="mt-2 text-xs md:text-sm text-foreground font-medium">
                     {uploadStatus === 'uploading' ? 'Processing...' :
                      uploadStatus === 'success' ? 'Data Imported!' :
                      uploadStatus === 'error' ? 'Upload Failed' :
@@ -432,7 +431,7 @@ export default function RoutesPage() {
                 onClick={downloadSampleExcel}
               >
                 <Download className="w-4 h-4 mr-2" />
-                Download Sample Template
+                <span className="text-xs md:text-sm">Download Sample Template</span>
               </Button>
             </div>
           </div>
@@ -444,38 +443,38 @@ export default function RoutesPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4"
           >
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Route className="w-4 h-4" />
-                <span className="text-sm">Total Routes</span>
+            <div className="glass rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1 md:gap-2 text-muted-foreground mb-1 md:mb-2">
+                <Route className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="text-xs md:text-sm">Total Routes</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{routes.length}</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">{routes.length}</p>
             </div>
             
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <MapPin className="w-4 h-4" />
-                <span className="text-sm">Total Distance</span>
+            <div className="glass rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1 md:gap-2 text-muted-foreground mb-1 md:mb-2">
+                <MapPin className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="text-xs md:text-sm">Total Distance</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{totalDistance.toFixed(1)} km</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">{totalDistance.toFixed(1)} km</p>
             </div>
             
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm">Est. Time</span>
+            <div className="glass rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1 md:gap-2 text-muted-foreground mb-1 md:mb-2">
+                <Clock className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="text-xs md:text-sm">Est. Time</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{timeCalc.hours} hrs</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">{timeCalc.hours} hrs</p>
             </div>
             
-            <div className="glass rounded-xl p-4">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Truck className="w-4 h-4" />
-                <span className="text-sm">Vehicles</span>
+            <div className="glass rounded-xl p-3 md:p-4">
+              <div className="flex items-center gap-1 md:gap-2 text-muted-foreground mb-1 md:mb-2">
+                <Truck className="w-3 h-3 md:w-4 md:h-4" />
+                <span className="text-xs md:text-sm">Vehicles</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-base md:text-2xl font-bold text-foreground">
                 {satRoutes.length} SAT, {truckRoutes.length} Truck
               </p>
             </div>
@@ -488,19 +487,19 @@ export default function RoutesPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="glass rounded-xl p-6"
+            className="glass rounded-xl p-4 md:p-6"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-foreground">Generated Routes</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <h2 className="text-base md:text-lg font-semibold text-foreground">Generated Routes</h2>
               
               {/* Search for Admin */}
-              <div className="relative w-64">
+              <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search vehicle ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 text-sm"
                 />
               </div>
             </div>

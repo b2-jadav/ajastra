@@ -76,44 +76,44 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="h-full overflow-auto p-6 scrollbar-thin">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground">Manage your preferences and account settings</p>
+    <div className="h-full overflow-auto p-4 md:p-6 scrollbar-thin">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Settings</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Manage your preferences and account settings</p>
       </div>
 
-      <div className="space-y-6 max-w-2xl">
+      <div className="space-y-4 md:space-y-6 max-w-2xl">
         {/* Account Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-xl p-6"
+          className="glass rounded-xl p-4 md:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-primary/20">
-              <User className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="p-1.5 md:p-2 rounded-lg bg-primary/20">
+              <User className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Account</h2>
+            <h2 className="text-base md:text-lg font-semibold text-foreground">Account</h2>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+          <div className="space-y-3 md:space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 md:p-4 rounded-lg bg-secondary/50">
               <div>
-                <p className="font-medium text-foreground">Role</p>
-                <p className="text-sm text-muted-foreground">Your current access level</p>
+                <p className="text-sm md:text-base font-medium text-foreground">Role</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Your current access level</p>
               </div>
-              <span className="px-3 py-1 rounded-full bg-primary/20 text-primary font-medium capitalize">
+              <span className="px-2 md:px-3 py-1 rounded-full bg-primary/20 text-primary text-xs md:text-sm font-medium capitalize w-fit">
                 {user?.role}
               </span>
             </div>
             
             {user?.vehicleId && (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 md:p-4 rounded-lg bg-secondary/50">
                 <div>
-                  <p className="font-medium text-foreground">Assigned Vehicle</p>
-                  <p className="text-sm text-muted-foreground">Your current vehicle assignment</p>
+                  <p className="text-sm md:text-base font-medium text-foreground">Assigned Vehicle</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Your current vehicle assignment</p>
                 </div>
-                <span className="px-3 py-1 rounded-full bg-success/20 text-success font-medium">
+                <span className="px-2 md:px-3 py-1 rounded-full bg-success/20 text-success text-xs md:text-sm font-medium w-fit">
                   {user.vehicleId}
                 </span>
               </div>
@@ -127,32 +127,32 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="glass rounded-xl p-6"
+            className="glass rounded-xl p-4 md:p-6"
           >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg bg-destructive/20">
-                <Shield className="w-5 h-5 text-destructive" />
+            <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+              <div className="p-1.5 md:p-2 rounded-lg bg-destructive/20">
+                <Shield className="w-4 h-4 md:w-5 md:h-5 text-destructive" />
               </div>
-              <h2 className="text-lg font-semibold text-foreground">Security</h2>
+              <h2 className="text-base md:text-lg font-semibold text-foreground">Security</h2>
             </div>
             
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
-                <div className="flex items-center gap-3">
-                  <Key className="w-5 h-5 text-muted-foreground" />
+            <div className="space-y-3 md:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 md:p-4 rounded-lg bg-secondary/50">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <Key className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground shrink-0" />
                   <div>
-                    <p className="font-medium text-foreground">Change Password</p>
-                    <p className="text-sm text-muted-foreground">Update your admin password</p>
+                    <p className="text-sm md:text-base font-medium text-foreground">Change Password</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Update your admin password</p>
                   </div>
                 </div>
                 <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Lock className="w-4 h-4 mr-2" />
+                    <Button variant="outline" size="sm" className="text-xs md:text-sm w-fit">
+                      <Lock className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
                       Change
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-[90vw] sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Change Admin Password</DialogTitle>
                       <DialogDescription>
@@ -208,26 +208,26 @@ export default function SettingsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass rounded-xl p-6"
+          className="glass rounded-xl p-4 md:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-warning/20">
-              <Palette className="w-5 h-5 text-warning" />
+          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="p-1.5 md:p-2 rounded-lg bg-warning/20">
+              <Palette className="w-4 h-4 md:w-5 md:h-5 text-warning" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Appearance</h2>
+            <h2 className="text-base md:text-lg font-semibold text-foreground">Appearance</h2>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
-              <div className="flex items-center gap-3">
+          <div className="space-y-3 md:space-y-4">
+            <div className="flex items-center justify-between gap-3 p-3 md:p-4 rounded-lg bg-secondary/50">
+              <div className="flex items-center gap-2 md:gap-3">
                 {isDarkMode ? (
-                  <Moon className="w-5 h-5 text-primary" />
+                  <Moon className="w-4 h-4 md:w-5 md:h-5 text-primary shrink-0" />
                 ) : (
-                  <Sun className="w-5 h-5 text-warning" />
+                  <Sun className="w-4 h-4 md:w-5 md:h-5 text-warning shrink-0" />
                 )}
                 <div>
-                  <p className="font-medium text-foreground">Dark Mode</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm md:text-base font-medium text-foreground">Dark Mode</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">
                     {isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
                   </p>
                 </div>
@@ -245,28 +245,28 @@ export default function SettingsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="glass rounded-xl p-6"
+          className="glass rounded-xl p-4 md:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-primary/20">
-              <Settings className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="p-1.5 md:p-2 rounded-lg bg-primary/20">
+              <Settings className="w-4 h-4 md:w-5 md:h-5 text-primary" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Preferences</h2>
+            <h2 className="text-base md:text-lg font-semibold text-foreground">Preferences</h2>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+          <div className="space-y-3 md:space-y-4">
+            <div className="flex items-center justify-between gap-3 p-3 md:p-4 rounded-lg bg-secondary/50">
               <div>
-                <p className="font-medium text-foreground">Auto-refresh Map</p>
-                <p className="text-sm text-muted-foreground">Automatically update map markers</p>
+                <p className="text-sm md:text-base font-medium text-foreground">Auto-refresh Map</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Automatically update map markers</p>
               </div>
               <Switch defaultChecked />
             </div>
             
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+            <div className="flex items-center justify-between gap-3 p-3 md:p-4 rounded-lg bg-secondary/50">
               <div>
-                <p className="font-medium text-foreground">Show Route Animations</p>
-                <p className="text-sm text-muted-foreground">Animate route drawing on map</p>
+                <p className="text-sm md:text-base font-medium text-foreground">Show Route Animations</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Animate route drawing on map</p>
               </div>
               <Switch defaultChecked />
             </div>
@@ -278,28 +278,28 @@ export default function SettingsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass rounded-xl p-6"
+          className="glass rounded-xl p-4 md:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-success/20">
-              <Bell className="w-5 h-5 text-success" />
+          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="p-1.5 md:p-2 rounded-lg bg-success/20">
+              <Bell className="w-4 h-4 md:w-5 md:h-5 text-success" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+            <h2 className="text-base md:text-lg font-semibold text-foreground">Notifications</h2>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+          <div className="space-y-3 md:space-y-4">
+            <div className="flex items-center justify-between gap-3 p-3 md:p-4 rounded-lg bg-secondary/50">
               <div>
-                <p className="font-medium text-foreground">High Fill Alerts</p>
-                <p className="text-sm text-muted-foreground">Notify when bins reach 80% capacity</p>
+                <p className="text-sm md:text-base font-medium text-foreground">High Fill Alerts</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Notify when bins reach 80% capacity</p>
               </div>
               <Switch defaultChecked />
             </div>
             
-            <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
+            <div className="flex items-center justify-between gap-3 p-3 md:p-4 rounded-lg bg-secondary/50">
               <div>
-                <p className="font-medium text-foreground">Route Completion</p>
-                <p className="text-sm text-muted-foreground">Notify when routes are completed</p>
+                <p className="text-sm md:text-base font-medium text-foreground">Route Completion</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Notify when routes are completed</p>
               </div>
               <Switch defaultChecked />
             </div>
@@ -311,32 +311,32 @@ export default function SettingsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass rounded-xl p-6"
+          className="glass rounded-xl p-4 md:p-6"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-sat/20">
-              <Info className="w-5 h-5 text-sat" />
+          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+            <div className="p-1.5 md:p-2 rounded-lg bg-sat/20">
+              <Info className="w-4 h-4 md:w-5 md:h-5 text-sat" />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">About</h2>
+            <h2 className="text-base md:text-lg font-semibold text-foreground">About</h2>
           </div>
           
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-secondary/50">
-              <div className="flex items-center gap-4 mb-3">
+          <div className="space-y-3 md:space-y-4">
+            <div className="p-3 md:p-4 rounded-lg bg-secondary/50">
+              <div className="flex items-center gap-3 md:gap-4 mb-3">
                 <img 
                   src={isDarkMode ? logoDark : logoLight} 
                   alt="AJΔSTRA Logo" 
-                  className="w-12 h-12 rounded-lg object-cover"
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover shrink-0"
                 />
                 <div>
-                  <p className="font-bold text-foreground text-lg">AJΔSTRA</p>
+                  <p className="font-bold text-foreground text-base md:text-lg">AJΔSTRA</p>
                   <p className="text-xs text-muted-foreground">AI System for Smart Transport Routing Analytics</p>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-3">
+              <p className="text-xs md:text-sm text-muted-foreground mt-3">
                 Version 1.0.0
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-xs md:text-sm text-muted-foreground mt-2">
                 AI-powered waste management route optimization system. 
                 Uses OSRM for road network routing and advanced algorithms for 
                 optimal route planning.
