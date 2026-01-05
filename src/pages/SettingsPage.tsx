@@ -334,7 +334,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <p className="text-xs md:text-sm text-muted-foreground mt-3">
-                Version 1.0.0
+                Version 1.9.3
               </p>
               <p className="text-xs md:text-sm text-muted-foreground mt-2">
                 AI-powered waste management route optimization system. 
