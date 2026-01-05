@@ -38,9 +38,12 @@ export default function RoutesPage() {
     ? routes.find(r => r.vehicleId.toLowerCase() === user.vehicleId?.toLowerCase())
     : null;
 
-  // Get assigned bins for driver
-  const assignedBins = driverRoute?.route
-    .filter(point => point.type === 'smartbin')
+  // Check if driver is a truck driver or SAT driver
+  const isTruckDriver = driverRoute?.vehicleType === 'truck';
+
+  // Get assigned stops for driver (bins for SAT, stations for Truck)
+  const assignedStops = driverRoute?.route
+    .filter(point => isTruckDriver ? point.type === 'compact-station' : point.type === 'smartbin')
     .map(point => point.id) || [];
 
   const handleGenerateRoutes = async () => {
@@ -248,29 +251,35 @@ export default function RoutesPage() {
               <div className="glass rounded-xl p-4">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Package className="w-4 h-4" />
-                  <span className="text-sm">Stops</span>
+                  <span className="text-sm">{isTruckDriver ? 'Stations' : 'Stops'}</span>
                 </div>
-                <p className="text-2xl font-bold text-foreground">{assignedBins.length}</p>
+                <p className="text-2xl font-bold text-foreground">{assignedStops.length}</p>
               </div>
             </motion.div>
 
-            {/* Assigned Bins Dropdown */}
+            {/* Assigned Stops (Bins for SAT, Stations for Truck) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
               className="glass rounded-xl p-6"
             >
-              <h2 className="text-lg font-semibold text-foreground mb-4">Assigned Bins</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                {isTruckDriver ? 'Assigned Stations' : 'Assigned Bins'}
+              </h2>
               <div className="grid gap-2 max-h-64 overflow-auto scrollbar-thin">
-                {assignedBins.map((binId, index) => {
-                  const bin = data.smartBins.find(b => b.id === binId);
+                {assignedStops.map((stopId, index) => {
+                  const station = isTruckDriver ? data.compactStations.find(s => s.id === stopId) : null;
+                  const bin = !isTruckDriver ? data.smartBins.find(b => b.id === stopId) : null;
                   return (
-                    <div key={binId} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                    <div key={stopId} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
                       <span className="text-sm font-medium text-muted-foreground w-6">{index + 1}.</span>
-                      <span className="font-medium text-foreground">{binId}</span>
+                      <span className="font-medium text-foreground">{stopId}</span>
                       {bin && (
                         <span className="text-sm text-muted-foreground">- {bin.area}</span>
+                      )}
+                      {station && (
+                        <span className="text-sm text-muted-foreground">- {station.area}</span>
                       )}
                     </div>
                   );
