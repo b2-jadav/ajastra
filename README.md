@@ -4,6 +4,7 @@
 🔗 **GitHub Repository:**  
 https://github.com/b2-jadav/ajastra.git
 
+- **Live URL**: https://ajastra.netlify.app/
 
 
 ## 📌 Overview
@@ -119,7 +120,7 @@ The AJASTRA system is now live and fully responsive on all devices, including mo
 
 ## 👥 Developer
 
-**Created by:** team-ajastra
+**Created by:** Team-Ajastra
 **Contact:** [GitHub Profile](https://github.com/b2-jadav)
 
 ---
@@ -255,8 +256,6 @@ npm run build
 ---
 
 ## 📊 Build Status & Deployment
-
-[![Netlify Status](https://api.netlify.com/api/v1/badges/YOUR-NETLIFY-ID/deploy-status)](https://app.netlify.com/sites/ajastra/deploys)
 
 ### Current Deployment
 - **Live URL**: https://ajastra.netlify.app/
