@@ -210,6 +210,9 @@ export default function LoginPage() {
                   className="bg-secondary/50 pl-10"
                 />
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Default password for Admin ('12345')
+              </p>
             </motion.div>
           )}
 
