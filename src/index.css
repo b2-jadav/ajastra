@@ -181,6 +181,17 @@
   .leaflet-popup-tip {
     background: hsl(var(--card)) !important;
   }
+
+  /* Ensure leaflet stays below mobile header and drawer */
+  .leaflet-pane,
+  .leaflet-control {
+    z-index: 400 !important;
+  }
+
+  .leaflet-top,
+  .leaflet-bottom {
+    z-index: 500 !important;
+  }
 }
 
 @layer utilities {

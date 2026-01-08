@@ -50,7 +50,7 @@ export function MobileHeader({ activeTab, onTabChange }: SidebarProps) {
   };
 
   return (
-    <div className="md:hidden flex items-center justify-between p-4 bg-sidebar border-b border-sidebar-border">
+    <div className="md:hidden flex items-center justify-between p-4 bg-sidebar border-b border-sidebar-border relative z-[1000]">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg overflow-hidden">
           <img 
@@ -68,7 +68,7 @@ export function MobileHeader({ activeTab, onTabChange }: SidebarProps) {
             <Menu className="w-5 h-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border">
+        <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border z-[1001]">
           {/* Logo Section */}
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
