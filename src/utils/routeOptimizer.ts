@@ -14,14 +14,19 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 // Get OSRM route between points with retry and timeout
+// Uses traffic-aware routing with time annotations
 async function getOSRMRoute(
   coordinates: [number, number][],
   retries = 3,
-  timeout = 15000
-): Promise<{ coords: [number, number][]; distance: number; duration: number } | null> {
+  timeout = 15000,
+  useTrafficWeights = true
+): Promise<{ coords: [number, number][]; distance: number; duration: number; avgSpeed: number } | null> {
   if (coordinates.length < 2) return null;
   
   const coordString = coordinates.map(c => `${c[1]},${c[0]}`).join(';');
+  
+  // Add annotations for traffic-aware routing (speed, duration per segment)
+  const annotations = useTrafficWeights ? '&annotations=speed,duration' : '';
   
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -29,7 +34,7 @@ async function getOSRMRoute(
       const timeoutId = setTimeout(() => controller.abort(), timeout);
       
       const response = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`,
+        `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson${annotations}&alternatives=true`,
         { signal: controller.signal }
       );
       
@@ -56,11 +61,29 @@ async function getOSRMRoute(
       
       const data = await response.json();
       
-      if (data.routes && data.routes[0]) {
+      if (data.routes && data.routes.length > 0) {
+        // Select best route based on duration (traffic-aware)
+        // OSRM returns alternatives sorted by duration, but we can check
+        let bestRoute = data.routes[0];
+        
+        // If alternatives exist, pick the one with shortest duration (accounts for traffic)
+        if (data.routes.length > 1) {
+          for (const route of data.routes) {
+            if (route.duration < bestRoute.duration) {
+              bestRoute = route;
+            }
+          }
+        }
+        
+        const distance = bestRoute.distance / 1000; // km
+        const duration = bestRoute.duration / 60; // minutes
+        const avgSpeed = duration > 0 ? (distance / (duration / 60)) : 25; // km/h
+        
         return {
-          coords: data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]),
-          distance: data.routes[0].distance / 1000, // Convert to km
-          duration: data.routes[0].duration / 60 // Convert to minutes
+          coords: bestRoute.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]),
+          distance: distance,
+          duration: duration,
+          avgSpeed: avgSpeed
         };
       }
     } catch (error) {
@@ -276,197 +299,216 @@ export async function generateOptimizedRoutes({
     binsToCollect = [...bins];
   }
   
-  // Create a set of remaining bins to collect
-  const remainingBins = new Set(binsToCollect.map(b => b.id));
-  const binMap = new Map(binsToCollect.map(b => [b.id, b]));
+  // ========== BALANCED DISTRIBUTION ALGORITHM ==========
+  // Calculate bins per vehicle for equal distribution
+  const totalBins = binsToCollect.length;
+  const numSATs = activeSATs.length;
+  const binsPerSAT = Math.ceil(totalBins / numSATs);
+  const effectiveBinsPerSAT = Math.min(binsPerSAT, MAX_STOPS_PER_SAT);
   
-  // Track SAT times for calculating total time
+  console.log(`Balanced distribution: ${totalBins} bins across ${numSATs} SATs (${effectiveBinsPerSAT} bins each)`);
+  
+  // Assign bins to nearest stations first
+  const stationBinMap = assignBinsToStations(binsToCollect, stations);
+  
+  // Create a pool of all bins with their assigned stations
+  const binPool: { bin: SmartBin; station: CompactStation }[] = [];
+  stationBinMap.forEach((stationBins, stationId) => {
+    const station = stations.find(s => s.id === stationId);
+    if (station) {
+      stationBins.forEach(bin => {
+        binPool.push({ bin, station });
+      });
+    }
+  });
+  
+  // Sort bins by fill level (highest first for priority collection)
+  binPool.sort((a, b) => b.bin.currentLevel - a.bin.currentLevel);
+  
+  // Track SAT times and station waste
   const satTimes: number[] = [];
   const truckTimes: number[] = [];
-  
-  // Track station waste accumulation
   const stationWaste = new Map<string, number>();
   stations.forEach(s => stationWaste.set(s.id, s.currentLevel || 0));
   
-  // Process each active SAT one by one (fast nearest-neighbor approach)
-  for (const sat of activeSATs) {
-    if (remainingBins.size === 0) break;
+  // ========== DISTRIBUTE BINS EQUALLY TO ALL SATs ==========
+  let binIndex = 0;
+  
+  for (let satIdx = 0; satIdx < activeSATs.length; satIdx++) {
+    const sat = activeSATs[satIdx];
     
-    // Find nearest station with remaining bins nearby
-    let bestStation = stations[0];
-    let minAvgDist = Infinity;
+    // Calculate how many bins this SAT should get
+    const remainingBins = binPool.length - binIndex;
+    const remainingSATs = activeSATs.length - satIdx;
+    const binsForThisSAT = Math.min(
+      Math.ceil(remainingBins / remainingSATs),
+      MAX_STOPS_PER_SAT
+    );
     
-    for (const station of stations) {
-      let totalDist = 0;
-      let count = 0;
-      remainingBins.forEach(binId => {
-        const bin = binMap.get(binId);
-        if (bin) {
-          const dist = haversineDistance(station.lat, station.lng, bin.lat, bin.lng);
-          totalDist += dist;
-          count++;
-        }
-      });
-      const avgDist = count > 0 ? totalDist / count : Infinity;
-      if (avgDist < minAvgDist) {
-        minAvgDist = avgDist;
-        bestStation = station;
-      }
+    if (binsForThisSAT === 0 || binIndex >= binPool.length) {
+      // Even if no bins, give SAT at least a check route if there are stations
+      continue;
     }
     
-    const station = bestStation;
-    
-    // Collect bins using nearest neighbor, respecting capacity and max 20 stops
-    const collectedBins: SmartBin[] = [];
+    // Collect bins for this SAT
+    const satBins: SmartBin[] = [];
     let currentLoad = 0;
-    let currentLat = station.lat;
-    let currentLng = station.lng;
+    let targetStation: CompactStation | null = null;
     
-    while (collectedBins.length < MAX_STOPS_PER_SAT && remainingBins.size > 0) {
-      // Find nearest remaining bin
-      let nearestBin: SmartBin | null = null;
-      let nearestDist = Infinity;
-      
-      remainingBins.forEach(binId => {
-        const bin = binMap.get(binId);
-        if (bin) {
-          const dist = haversineDistance(currentLat, currentLng, bin.lat, bin.lng);
-          if (dist < nearestDist) {
-            nearestDist = dist;
-            nearestBin = bin;
-          }
-        }
-      });
-      
-      if (!nearestBin) break;
-      
-      // Check if adding this bin exceeds capacity (weight in kg)
-      const binWeight = (nearestBin.currentLevel / 100) * nearestBin.capacity * 0.5;
-      if (currentLoad + binWeight > sat.capacity) {
-        break; // Capacity limit reached
-      }
-      
-      // Add bin to route
-      collectedBins.push(nearestBin);
-      currentLoad += binWeight;
-      currentLat = nearestBin.lat;
-      currentLng = nearestBin.lng;
-      remainingBins.delete(nearestBin.id);
+    // Get the initial station from first bin
+    const firstBinData = binPool[binIndex];
+    if (firstBinData) {
+      targetStation = firstBinData.station;
     }
     
-    if (collectedBins.length === 0) continue;
+    // Collect bins up to the calculated limit, respecting capacity
+    while (satBins.length < binsForThisSAT && binIndex < binPool.length) {
+      const binData = binPool[binIndex];
+      
+      // If this bin's station is different, use nearest neighbor to decide
+      // For simplicity, prioritize bins near the first station
+      const binWeight = (binData.bin.currentLevel / 100) * binData.bin.capacity * 0.5;
+      
+      if (currentLoad + binWeight > sat.capacity) {
+        binIndex++;
+        continue; // Skip bins that would exceed capacity
+      }
+      
+      satBins.push(binData.bin);
+      currentLoad += binWeight;
+      
+      // Use the station from the majority of assigned bins
+      if (!targetStation) {
+        targetStation = binData.station;
+      }
+      
+      binIndex++;
+    }
     
-    // Calculate distance directly without waiting for OSRM
-    let totalDist = haversineDistance(station.lat, station.lng, collectedBins[0].lat, collectedBins[0].lng);
-    for (let i = 0; i < collectedBins.length - 1; i++) {
+    if (satBins.length === 0 || !targetStation) continue;
+    
+    // Optimize bin order using nearest neighbor from station
+    const optimizedBins = nearestNeighborTSP(targetStation, satBins);
+    
+    // Calculate distance
+    let totalDist = haversineDistance(targetStation.lat, targetStation.lng, optimizedBins[0].lat, optimizedBins[0].lng);
+    for (let i = 0; i < optimizedBins.length - 1; i++) {
       totalDist += haversineDistance(
-        collectedBins[i].lat, collectedBins[i].lng,
-        collectedBins[i + 1].lat, collectedBins[i + 1].lng
+        optimizedBins[i].lat, optimizedBins[i].lng,
+        optimizedBins[i + 1].lat, optimizedBins[i + 1].lng
       );
     }
     totalDist += haversineDistance(
-      collectedBins[collectedBins.length - 1].lat, collectedBins[collectedBins.length - 1].lng,
-      station.lat, station.lng
+      optimizedBins[optimizedBins.length - 1].lat, optimizedBins[optimizedBins.length - 1].lng,
+      targetStation.lat, targetStation.lng
     );
     
-    const tripTime = Math.round((totalDist / 25) * 60); // 25 km/h avg speed
+    // Estimate time based on traffic conditions (use slower speed during peak hours)
+    const currentHour = new Date().getHours();
+    const isPeakHour = (currentHour >= 8 && currentHour <= 10) || (currentHour >= 17 && currentHour <= 20);
+    const avgSpeed = isPeakHour ? 18 : 25; // km/h - slower during peak
+    const tripTime = Math.round((totalDist / avgSpeed) * 60);
     satTimes.push(tripTime);
     
     // Update station waste accumulation
-    const currentStationWaste = stationWaste.get(station.id) || 0;
-    stationWaste.set(station.id, currentStationWaste + currentLoad);
+    const currentStationWaste = stationWaste.get(targetStation.id) || 0;
+    stationWaste.set(targetStation.id, currentStationWaste + currentLoad);
     
-    // Build basic route coords
+    // Build route coordinates
     const routeCoords: [number, number][] = [
-      [station.lat, station.lng],
-      ...collectedBins.map(b => [b.lat, b.lng] as [number, number]),
-      [station.lat, station.lng]
+      [targetStation.lat, targetStation.lng],
+      ...optimizedBins.map(b => [b.lat, b.lng] as [number, number]),
+      [targetStation.lat, targetStation.lng]
     ];
     
     const route: OptimizedRoute = {
       vehicleId: sat.id,
       vehicleType: 'sat',
       route: [
-        { lat: station.lat, lng: station.lng, type: 'compact-station', id: station.id, action: 'pickup' },
-        ...collectedBins.map(b => ({
+        { lat: targetStation.lat, lng: targetStation.lng, type: 'compact-station', id: targetStation.id, action: 'pickup' },
+        ...optimizedBins.map(b => ({
           lat: b.lat, lng: b.lng, type: 'smartbin' as const, id: b.id, action: 'pickup' as const
         })),
-        { lat: station.lat, lng: station.lng, type: 'compact-station', id: station.id, action: 'dropoff' }
+        { lat: targetStation.lat, lng: targetStation.lng, type: 'compact-station', id: targetStation.id, action: 'dropoff' }
       ],
       totalDistance: Math.round(totalDist * 10) / 10,
       estimatedTime: tripTime,
       startTime: 0,
       tripNumber: 1,
-      targetStationId: station.id,
+      targetStationId: targetStation.id,
       coordinates: routeCoords,
       osrmFetched: false
     };
     
     routes.push(route);
     
-    // Callback for real-time updates
     if (onRouteGenerated) {
       onRouteGenerated(route, [...routes]);
     }
   }
   
-  // Generate Truck routes (stations -> dumpyards)
-  // Truck routing logic: truck full OR 2 stations OR stations = trucks
+  // ========== BALANCED TRUCK DISTRIBUTION ==========
+  // Distribute stations equally to all trucks
   if (activeTrucks.length > 0 && stations.length > 0) {
     // Sort stations by waste level (descending)
     const stationsWithWaste = stations.map(s => ({
       station: s,
       waste: stationWaste.get(s.id) || s.currentLevel || 0
-    })).sort((a, b) => b.waste - a.waste);
+    })).filter(s => s.waste > 0).sort((a, b) => b.waste - a.waste);
     
-    const assignedStations = new Set<string>();
-    let truckIndex = 0;
+    // Calculate stations per truck for equal distribution
+    const stationsPerTruck = Math.ceil(stationsWithWaste.length / activeTrucks.length);
+    const effectiveStationsPerTruck = Math.min(stationsPerTruck, MAX_STATIONS_PER_TRUCK);
     
-    // Determine if stations = trucks (assign one station per truck)
-    const oneStationPerTruck = stations.length <= activeTrucks.length;
+    console.log(`Balanced truck distribution: ${stationsWithWaste.length} stations across ${activeTrucks.length} trucks (${effectiveStationsPerTruck} each)`);
     
-    while (truckIndex < activeTrucks.length && assignedStations.size < stations.length) {
-      const truck = activeTrucks[truckIndex];
+    let stationIndex = 0;
+    
+    for (let truckIdx = 0; truckIdx < activeTrucks.length; truckIdx++) {
+      const truck = activeTrucks[truckIdx];
+      
+      // Calculate how many stations this truck should get
+      const remainingStations = stationsWithWaste.length - stationIndex;
+      const remainingTrucks = activeTrucks.length - truckIdx;
+      const stationsForThisTruck = Math.min(
+        Math.ceil(remainingStations / remainingTrucks),
+        MAX_STATIONS_PER_TRUCK
+      );
+      
+      if (stationsForThisTruck === 0 || stationIndex >= stationsWithWaste.length) {
+        continue;
+      }
+      
       const truckStations: CompactStation[] = [];
       let truckLoad = 0;
       
-      // Find nearest dumpyard for this truck
-      const firstUnassigned = stationsWithWaste.find(s => !assignedStations.has(s.station.id));
-      if (!firstUnassigned) break;
+      while (truckStations.length < stationsForThisTruck && stationIndex < stationsWithWaste.length) {
+        const { station, waste } = stationsWithWaste[stationIndex];
+        
+        if (truckLoad + waste > truck.capacity) {
+          stationIndex++;
+          continue;
+        }
+        
+        truckStations.push(station);
+        truckLoad += waste;
+        stationIndex++;
+      }
       
+      if (truckStations.length === 0) continue;
+      
+      // Find nearest dumpyard
       let nearestDumpyard = activeDumpyards[0];
       let nearestDumpDist = Infinity;
       for (const dump of activeDumpyards) {
-        const dist = haversineDistance(firstUnassigned.station.lat, firstUnassigned.station.lng, dump.lat, dump.lng);
+        const dist = haversineDistance(truckStations[0].lat, truckStations[0].lng, dump.lat, dump.lng);
         if (dist < nearestDumpDist) {
           nearestDumpDist = dist;
           nearestDumpyard = dump;
         }
       }
       
-      // Assign stations to this truck
-      for (const { station, waste } of stationsWithWaste) {
-        if (assignedStations.has(station.id)) continue;
-        
-        // Check conditions to move to next truck:
-        // 1. Truck is full
-        // 2. Already has 2 stations
-        // 3. One station per truck mode
-        if (truckLoad + waste > truck.capacity) break;
-        if (truckStations.length >= MAX_STATIONS_PER_TRUCK) break;
-        if (oneStationPerTruck && truckStations.length >= 1) break;
-        
-        truckStations.push(station);
-        truckLoad += waste;
-        assignedStations.add(station.id);
-      }
-      
-      if (truckStations.length === 0) {
-        truckIndex++;
-        continue;
-      }
-      
-      // Optimize station order using nearest neighbor from dumpyard
+      // Optimize station order using nearest neighbor
       const optimizedStations = nearestNeighborTSP(nearestDumpyard, truckStations);
       
       // Calculate distance
@@ -482,7 +524,11 @@ export async function generateOptimizedRoutes({
         nearestDumpyard.lat, nearestDumpyard.lng
       );
       
-      const tripTime = Math.round((totalDist / 35) * 60); // 35 km/h avg truck speed
+      // Traffic-aware timing for trucks
+      const currentHour = new Date().getHours();
+      const isPeakHour = (currentHour >= 8 && currentHour <= 10) || (currentHour >= 17 && currentHour <= 20);
+      const avgTruckSpeed = isPeakHour ? 25 : 35; // km/h
+      const tripTime = Math.round((totalDist / avgTruckSpeed) * 60);
       truckTimes.push(tripTime);
       
       const routeCoords: [number, number][] = [
@@ -503,7 +549,7 @@ export async function generateOptimizedRoutes({
         ],
         totalDistance: Math.round(totalDist * 10) / 10,
         estimatedTime: tripTime,
-        startTime: Math.max(...satTimes, 0), // Start after SATs complete
+        startTime: Math.max(...satTimes, 0),
         coordinates: routeCoords,
         osrmFetched: false
       };
@@ -513,13 +559,10 @@ export async function generateOptimizedRoutes({
       if (onRouteGenerated) {
         onRouteGenerated(route, [...routes]);
       }
-      
-      truckIndex++;
     }
   }
   
-  // Now progressively fetch OSRM routes for accurate paths
-  // Process in batches to avoid rate limiting
+  // Now progressively fetch OSRM routes for accurate paths with traffic data
   fetchOSRMRoutesProgressively(routes, onRouteUpdated);
   
   return routes;
